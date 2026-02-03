@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kupon Bot - Admin Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -160,6 +161,14 @@
             margin-bottom: 20px;
             border: 1px solid #e9ecef;
         }
+        
+        .date-highlight {
+            background: transparent;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: normal;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -242,44 +251,86 @@
             </table>
         </div>
         
-        <div class="section">
-            <h2 class="section-title">📦 Buyurtmalar</h2>
-            <input type="text" class="search-box" id="orderSearch" placeholder="Buyurtma qidirish...">
-            <div id="ordersLoading" class="loading">Ma'lumotlar yuklanmoqda...</div>
-            <table class="table" id="ordersTable" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>Buyurtma №</th>
-                        <th>Mijoz</th>
-                        <th>Telefon</th>
-                        <th>Summa</th>
-                        <th>Holat</th>
-                        <th>Sana</th>
-                        <th>Amal</th>
-                    </tr>
-                </thead>
-                <tbody id="ordersTableBody">
-                </tbody>
-            </table>
-        </div>
+
         
         <div class="section">
             <h2 class="section-title">👥 Foydalanuvchilar</h2>
-            <div style="margin-bottom: 20px;">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                    <button class="btn" onclick="exportUsers('all')" style="background: #28a745;">📊 Barcha foydalanuvchilar</button>
-                    <button class="btn" onclick="exportUsers('today')" style="background: #17a2b8;">📅 Bugungi foydalanuvchilar</button>
-                    <button class="btn" onclick="exportUsers('this_month')" style="background: #ffc107; color: #000;">📆 Oylik foydalanuvchilar</button>
-                    <button class="btn" onclick="exportUsers('this_year')" style="background: #6f42c1;">📈 Yillik foydalanuvchilar</button>
-                </div>
-                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                    <button class="btn" onclick="loadUsers('all')" style="background: #6c757d;">👁️ Barchasini ko'rish</button>
-                    <button class="btn" onclick="loadUsers('today')" style="background: #6c757d;">👁️ Bugungilarni ko'rish</button>
-                    <button class="btn" onclick="loadUsers('this_month')" style="background: #6c757d;">👁️ Oyliklarni ko'rish</button>
-                    <button class="btn" onclick="loadUsers('this_year')" style="background: #6c757d;">👁️ Yilliklarni ko'rish</button>
+            
+            <!-- Filter Section -->
+            <div style="background: #dbeafe; border: 2px dashed #3b82f6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-size: 13px; font-weight: 600; color: #1e40af;">Yil</label>
+                        <select id="yearFilter" style="padding: 10px 16px; border: 2px solid #60a5fa; border-radius: 6px; font-size: 14px; background: white; color: #333; min-width: 140px; cursor: pointer;">
+                            <option value="">Yilni tanlang</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-size: 13px; font-weight: 600; color: #1e40af;">Oy</label>
+                        <select id="monthFilter" style="padding: 10px 16px; border: 2px solid #60a5fa; border-radius: 6px; font-size: 14px; background: white; color: #333; min-width: 160px; cursor: pointer;">
+                            <option value="">Oyni tanlang</option>
+                            <option value="01">01 - Yanvar</option>
+                            <option value="02">02 - Fevral</option>
+                            <option value="03">03 - Mart</option>
+                            <option value="04">04 - Aprel</option>
+                            <option value="05">05 - May</option>
+                            <option value="06">06 - Iyun</option>
+                            <option value="07">07 - Iyul</option>
+                            <option value="08">08 - Avgust</option>
+                            <option value="09">09 - Sentabr</option>
+                            <option value="10">10 - Oktabr</option>
+                            <option value="11">11 - Noyabr</option>
+                            <option value="12">12 - Dekabr</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-size: 13px; font-weight: 600; color: #1e40af;">Kun</label>
+                        <select id="dayFilter" style="padding: 10px 16px; border: 2px solid #60a5fa; border-radius: 6px; font-size: 14px; background: white; color: #333; min-width: 100px; cursor: pointer;">
+                            <option value="">Kunni tanlang</option>
+                            <option value="01">01</option>
+                            <option value="02">02</option>
+                            <option value="03">03</option>
+                            <option value="04">04</option>
+                            <option value="05">05</option>
+                            <option value="06">06</option>
+                            <option value="07">07</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                            <option value="19">19</option>
+                            <option value="20">20</option>
+                            <option value="21">21</option>
+                            <option value="22">22</option>
+                            <option value="23">23</option>
+                            <option value="24">24</option>
+                            <option value="25">25</option>
+                            <option value="26">26</option>
+                            <option value="27">27</option>
+                            <option value="28">28</option>
+                            <option value="29">29</option>
+                            <option value="30">30</option>
+                            <option value="31">31</option>
+                        </select>
+                    </div>
+                    <button onclick="applyDateFilter()" style="padding: 10px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; height: 42px;">🔍 Filtrni qo'llash</button>
+                    <button onclick="resetDateFilter()" style="padding: 10px 24px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; height: 42px;">🔄 Tozalash</button>
+                    <button onclick="exportFilteredUsers()" style="padding: 10px 24px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; height: 42px; margin-left: 10px;">📊 Excelda yuklab olish</button>
                 </div>
             </div>
-            <input type="text" class="search-box" id="userSearch" placeholder="Foydalanuvchi qidirish...">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div style="font-size: 14px; color: #666; font-weight: 500;" id="userResultCount">Jami: <strong>0</strong> ta foydalanuvchi</div>
+                <input type="text" class="search-box" id="userSearch" placeholder="Qidirish..." style="max-width: 300px; margin: 0;">
+            </div>
+            
             <div id="usersLoading" class="loading">Ma'lumotlar yuklanmoqda...</div>
             <table class="table" id="usersTable" style="display: none;">
                 <thead>
@@ -334,21 +385,59 @@
             window.location.href = '/login.html';
         }
         
-        // API base URL
+        // API base URL (Local development)
         const API_BASE = '/api/admin';
+        
+        // Store all users and filtered users
+        let allUsers = [];
+        let filteredUsers = [];
+        
+        // Helper function for API calls with bypass headers
+        async function apiCall(url, options = {}) {
+            const defaultHeaders = {
+                'bypass-tunnel-reminder': 'true',
+                'User-Agent': 'KuponBot-Admin/1.0',
+                'Content-Type': 'application/json'
+            };
+            
+            const mergedOptions = {
+                ...options,
+                headers: {
+                    ...defaultHeaders,
+                    ...options.headers
+                }
+            };
+            
+            return fetch(url, mergedOptions);
+        }
         
         // Load data when page loads
         document.addEventListener('DOMContentLoaded', function() {
             loadStats();
             loadProducts();
-            loadOrders();
             loadUsers();
+            populateYearFilter(); // Yil filtrini avtomatik to'ldirish
         });
+        
+        // Populate year filter dynamically
+        function populateYearFilter() {
+            const yearSelect = document.getElementById('yearFilter');
+            const currentYear = new Date().getFullYear();
+            const startYear = 2020; // Boshlang'ich yil
+            
+            // Joriy yildan boshlab 2020 yilgacha
+            for (let year = currentYear; year >= startYear; year--) {
+                const option = document.createElement('option');
+                option.value = year.toString();
+                option.textContent = year.toString();
+                yearSelect.appendChild(option);
+            }
+        }
         
         // Load statistics
         async function loadStats() {
             try {
-                const response = await fetch(`${API_BASE}/stats`);
+                const response = await apiCall(`${API_BASE}/stats`);
                 const stats = await response.json();
                 
                 document.getElementById('totalUsers').textContent = stats.totalUsers;
@@ -362,14 +451,9 @@
         
         // Show add product form
         function showAddProductForm() {
-            console.log('showAddProductForm called');
             const form = document.getElementById('addProductForm');
-            console.log('Form element:', form);
             if (form) {
                 form.style.display = 'block';
-                console.log('Form displayed');
-            } else {
-                console.error('addProductForm element not found');
             }
         }
         
@@ -398,11 +482,8 @@
             }
             
             try {
-                const response = await fetch(`${API_BASE}/products`, {
+                const response = await apiCall(`${API_BASE}/products`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
                     body: JSON.stringify({
                         name: name,
                         description: description,
@@ -429,7 +510,7 @@
         // Load products
         async function loadProducts() {
             try {
-                const response = await fetch(`${API_BASE}/products`);
+                const response = await apiCall(`${API_BASE}/products`);
                 const products = await response.json();
                 
                 const tbody = document.getElementById('productsTableBody');
@@ -470,7 +551,7 @@
             }
             
             try {
-                const response = await fetch(`${API_BASE}/products/${id}`, {
+                const response = await apiCall(`${API_BASE}/products/${id}`, {
                     method: 'DELETE'
                 });
                 
@@ -487,71 +568,7 @@
             }
         }
         
-        // Load orders
-        async function loadOrders() {
-            try {
-                const response = await fetch(`${API_BASE}/orders`);
-                const orders = await response.json();
-                
-                const tbody = document.getElementById('ordersTableBody');
-                tbody.innerHTML = '';
-                
-                orders.forEach(order => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td><strong>${order.orderNumber}</strong></td>
-                        <td>${order.customerName}</td>
-                        <td>${order.phoneNumber}</td>
-                        <td>${formatPrice(order.totalAmount)} so'm</td>
-                        <td>${getOrderStatusText(order.status)}</td>
-                        <td>${new Date(order.createdAt).toLocaleDateString('uz-UZ')}</td>
-                        <td>
-                            <select onchange="updateOrderStatus(${order.id}, this.value)" style="padding: 5px;">
-                                <option value="PENDING" ${order.status === 'PENDING' ? 'selected' : ''}>Kutilmoqda</option>
-                                <option value="CONFIRMED" ${order.status === 'CONFIRMED' ? 'selected' : ''}>Tasdiqlangan</option>
-                                <option value="PREPARING" ${order.status === 'PREPARING' ? 'selected' : ''}>Tayyorlanmoqda</option>
-                                <option value="SHIPPED" ${order.status === 'SHIPPED' ? 'selected' : ''}>Yuborilgan</option>
-                                <option value="DELIVERED" ${order.status === 'DELIVERED' ? 'selected' : ''}>Yetkazilgan</option>
-                                <option value="CANCELLED" ${order.status === 'CANCELLED' ? 'selected' : ''}>Bekor qilingan</option>
-                            </select>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-                
-                document.getElementById('ordersLoading').style.display = 'none';
-                document.getElementById('ordersTable').style.display = 'table';
-            } catch (error) {
-                console.error('Error loading orders:', error);
-                document.getElementById('ordersLoading').textContent = 'Xatolik yuz berdi';
-            }
-        }
-        
-        // Update order status
-        async function updateOrderStatus(orderId, status) {
-            try {
-                const response = await fetch(`${API_BASE}/orders/${orderId}/status`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        status: status
-                    })
-                });
-                
-                if (response.ok) {
-                    alert('Buyurtma holati yangilandi!');
-                    loadStats();
-                    loadOrders();
-                } else {
-                    alert('Xatolik yuz berdi!');
-                }
-            } catch (error) {
-                console.error('Error updating order status:', error);
-                alert('Xatolik yuz berdi!');
-            }
-        }
+
         
         // Load users
         async function loadUsers(filter = 'all') {
@@ -561,15 +578,140 @@
                     url = `${API_BASE}/users-filtered?filter=${filter}`;
                 }
                 
-                const response = await fetch(url);
+                const response = await apiCall(url);
                 const users = await response.json();
                 
-                displayUsers(users, filter);
+                allUsers = users;
+                filteredUsers = [...users];
+                displayUsers(filteredUsers);
                 
             } catch (error) {
                 console.error('Error loading users:', error);
                 document.getElementById('usersLoading').textContent = 'Xatolik yuz berdi';
             }
+        }
+        
+        function displayUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            const resultCount = document.getElementById('userResultCount');
+            resultCount.innerHTML = `Jami: <strong>${users.length}</strong> ta foydalanuvchi`;
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                
+                // Parse createdAt date
+                const createdDate = new Date(user.createdAt);
+                const formattedDate = `${String(createdDate.getDate()).padStart(2, '0')}/${String(createdDate.getMonth() + 1).padStart(2, '0')}/${createdDate.getFullYear()}`;
+                
+                row.innerHTML = `
+                    <td>${user.telegramId}</td>
+                    <td>${user.firstName || '-'}</td>
+                    <td>${user.lastName || '-'}</td>
+                    <td>${user.telegramUsername || 'Username yo\'q'}</td>
+                    <td>${user.phoneNumber || '-'}</td>
+                    <td>${user.birthDate || 'Kiritilmagan'}</td>
+                    <td>${user.state}</td>
+                    <td><span class="date-highlight">${formattedDate}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('usersLoading').style.display = 'none';
+            document.getElementById('usersTable').style.display = 'table';
+        }
+        
+        // Apply date filter
+        function applyDateFilter() {
+            const year = document.getElementById('yearFilter').value;
+            const month = document.getElementById('monthFilter').value;
+            const day = document.getElementById('dayFilter').value;
+            
+            if (!year && !month && !day) {
+                alert('Iltimos, kamida bitta filtrni tanlang!');
+                return;
+            }
+            
+            filteredUsers = allUsers.filter(user => {
+                const createdDate = new Date(user.createdAt);
+                const userDay = String(createdDate.getDate()).padStart(2, '0');
+                const userMonth = String(createdDate.getMonth() + 1).padStart(2, '0');
+                const userYear = createdDate.getFullYear().toString();
+                
+                let match = true;
+                if (year && userYear !== year) match = false;
+                if (month && userMonth !== month) match = false;
+                if (day && userDay !== day) match = false;
+                
+                return match;
+            });
+            
+            displayUsers(filteredUsers);
+        }
+        
+        // Reset date filter
+        function resetDateFilter() {
+            document.getElementById('yearFilter').value = '';
+            document.getElementById('monthFilter').value = '';
+            document.getElementById('dayFilter').value = '';
+            filteredUsers = [...allUsers];
+            displayUsers(filteredUsers);
+        }
+        
+        // Export filtered users to Excel
+        function exportFilteredUsers() {
+            if (filteredUsers.length === 0) {
+                alert('Eksport qilish uchun ma\'lumot yo\'q!');
+                return;
+            }
+            
+            // Prepare data
+            const data = [
+                ['ID', 'Ism', 'Familiya', 'Username', 'Telefon', 'Tug\'ilgan kun', 'Holat', 'Ro\'yxatdan o\'tgan']
+            ];
+            
+            filteredUsers.forEach(user => {
+                const createdDate = new Date(user.createdAt);
+                const formattedDate = `${String(createdDate.getDate()).padStart(2, '0')}/${String(createdDate.getMonth() + 1).padStart(2, '0')}/${createdDate.getFullYear()}`;
+                
+                data.push([
+                    user.telegramId,
+                    user.firstName || '-',
+                    user.lastName || '-',
+                    user.telegramUsername || 'Username yo\'q',
+                    user.phoneNumber || '-',
+                    user.birthDate || 'Kiritilmagan',
+                    user.state,
+                    formattedDate
+                ]);
+            });
+            
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // Set column widths
+            ws['!cols'] = [
+                { wch: 12 }, // ID
+                { wch: 15 }, // Ism
+                { wch: 15 }, // Familiya
+                { wch: 18 }, // Username
+                { wch: 15 }, // Telefon
+                { wch: 15 }, // Tug'ilgan kun
+                { wch: 12 }, // Holat
+                { wch: 18 }  // Ro'yxatdan o'tgan
+            ];
+            
+            // Add worksheet to workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Foydalanuvchilar');
+            
+            // Generate filename
+            const today = new Date();
+            const filename = `foydalanuvchilar_${today.getFullYear()}_${String(today.getMonth()+1).padStart(2,'0')}_${String(today.getDate()).padStart(2,'0')}.xlsx`;
+            
+            // Save file
+            XLSX.writeFile(wb, filename);
         }
         
         // Helper functions
@@ -608,34 +750,29 @@
             });
         });
         
-        document.getElementById('orderSearch').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            const rows = document.querySelectorAll('#ordersTableBody tr');
-            
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
-            });
-        });
+
         
         document.getElementById('userSearch').addEventListener('input', function(e) {
             const searchTerm = e.target.value.toLowerCase();
-            const rows = document.querySelectorAll('#usersTableBody tr');
             
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            if (!searchTerm) {
+                displayUsers(filteredUsers);
+                return;
+            }
+            
+            const searchResults = filteredUsers.filter(user => {
+                const searchString = `${user.telegramId} ${user.firstName} ${user.lastName} ${user.telegramUsername} ${user.phoneNumber}`.toLowerCase();
+                return searchString.includes(searchTerm);
             });
+            
+            displayUsers(searchResults);
         });
         
         // Test notifications function
         async function testNotifications() {
             try {
-                const response = await fetch(`${API_BASE}/test-notifications`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                const response = await apiCall(`${API_BASE}/test-notifications`, {
+                    method: 'POST'
                 });
                 
                 if (response.ok) {
@@ -652,11 +789,8 @@
         // Test anniversary function
         async function testAnniversary() {
             try {
-                const response = await fetch(`${API_BASE}/test-anniversary`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                const response = await apiCall(`${API_BASE}/test-anniversary`, {
+                    method: 'POST'
                 });
                 
                 if (response.ok) {
@@ -673,11 +807,8 @@
         // Test birthdays function
         async function testBirthdays() {
             try {
-                const response = await fetch(`${API_BASE}/test-birthdays`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                const response = await apiCall(`${API_BASE}/test-birthdays`, {
+                    method: 'POST'
                 });
                 
                 if (response.ok) {
@@ -694,11 +825,8 @@
         // Test 3-minute registration function
         async function testThreeMinute() {
             try {
-                const response = await fetch(`${API_BASE}/test-3minute`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                const response = await apiCall(`${API_BASE}/test-3minute`, {
+                    method: 'POST'
                 });
                 
                 if (response.ok) {
@@ -710,106 +838,6 @@
                 console.error('Error testing 3-minute:', error);
                 alert('❌ Xatolik yuz berdi: ' + error.message);
             }
-        }
-        
-        // Export users to Excel with filter
-        async function exportUsers(filter = 'all') {
-            try {
-                let url = `${API_BASE}/export-users`;
-                let fileName = 'foydalanuvchilar.xlsx';
-                
-                if (filter !== 'all') {
-                    url = `${API_BASE}/export-users-filtered?filter=${filter}`;
-                    fileName = getFilterFileName(filter);
-                }
-                
-                const response = await fetch(url, {
-                    method: 'GET'
-                });
-                
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const downloadUrl = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.download = fileName;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(downloadUrl);
-                    document.body.removeChild(a);
-                    
-                    alert(`✅ ${getFilterDisplayName(filter)} Excel fayl muvaffaqiyatli yuklab olindi!`);
-                } else {
-                    alert('❌ Xatolik yuz berdi: ' + response.statusText);
-                }
-            } catch (error) {
-                console.error('Error exporting users:', error);
-                alert('❌ Xatolik yuz berdi: ' + error.message);
-            }
-        }
-        
-        function getFilterFileName(filter) {
-            switch(filter) {
-                case 'today': return 'bugungi-foydalanuvchilar.xlsx';
-                case 'this_month': return 'oylik-foydalanuvchilar.xlsx';
-                case 'this_year': return 'yillik-foydalanuvchilar.xlsx';
-                default: return 'foydalanuvchilar.xlsx';
-            }
-        }
-        
-        function getFilterDisplayName(filter) {
-            switch(filter) {
-                case 'today': return 'Bugungi foydalanuvchilar';
-                case 'this_month': return 'Oylik foydalanuvchilar';
-                case 'this_year': return 'Yillik foydalanuvchilar';
-                default: return 'Barcha foydalanuvchilar';
-            }
-        }
-        
-        // Load users with filter
-        async function loadUsers(filter = 'all') {
-            try {
-                let url = `${API_BASE}/users`;
-                if (filter !== 'all') {
-                    url = `${API_BASE}/users-filtered?filter=${filter}`;
-                }
-                
-                const response = await fetch(url);
-                const users = await response.json();
-                
-                displayUsers(users, filter);
-                
-            } catch (error) {
-                console.error('Error loading users:', error);
-                document.getElementById('usersLoading').textContent = 'Xatolik yuz berdi';
-            }
-        }
-        
-        function displayUsers(users, filter) {
-            const tbody = document.getElementById('usersTableBody');
-            tbody.innerHTML = '';
-            
-            // Update section title with filter info
-            const sectionTitle = document.querySelector('.section:last-of-type .section-title');
-            sectionTitle.textContent = `👥 Foydalanuvchilar (${getFilterDisplayName(filter)}: ${users.length} ta)`;
-            
-            users.forEach(user => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${user.telegramId}</td>
-                    <td>${user.firstName || '-'}</td>
-                    <td>${user.lastName || '-'}</td>
-                    <td>${user.telegramUsername || 'Username yo\'q'}</td>
-                    <td>${user.phoneNumber || '-'}</td>
-                    <td>${user.birthDate || 'Kiritilmagan'}</td>
-                    <td>${user.state}</td>
-                    <td>${new Date(user.createdAt).toLocaleDateString('uz-UZ')}</td>
-                `;
-                tbody.appendChild(row);
-            });
-            
-            document.getElementById('usersLoading').style.display = 'none';
-            document.getElementById('usersTable').style.display = 'table';
         }
         
         // Send broadcast message
@@ -830,11 +858,8 @@
                 statusElement.textContent = '📤 Yuborilmoqda...';
                 statusElement.style.color = '#007bff';
                 
-                const response = await fetch(`${API_BASE}/broadcast`, {
+                const response = await apiCall(`${API_BASE}/broadcast`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
                     body: JSON.stringify({ message: message })
                 });
                 
