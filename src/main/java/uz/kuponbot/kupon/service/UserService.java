@@ -7,13 +7,17 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uz.kuponbot.kupon.entity.User;
 import uz.kuponbot.kupon.repository.UserRepository;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
+@Slf4j
 public class UserService {
     
     private final UserRepository userRepository;
@@ -24,13 +28,16 @@ public class UserService {
     
     public User save(User user) {
         user.setUpdatedAt(LocalDateTime.now());
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        log.info("User saved to DB: id={}, language={}, state={}", 
+            saved.getTelegramId(), saved.getLanguage(), saved.getState());
+        return saved;
     }
     
     public User createUser(Long telegramId) {
         User user = new User();
         user.setTelegramId(telegramId);
-        user.setState(User.UserState.WAITING_CONTACT);
+        user.setState(User.UserState.WAITING_LANGUAGE);
         return save(user);
     }
     

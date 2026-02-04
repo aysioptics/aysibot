@@ -2,6 +2,8 @@ package uz.kuponbot.kupon.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,6 +17,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
+@DynamicUpdate
 @Table(name = "users")
 @Data
 @NoArgsConstructor
@@ -40,7 +43,11 @@ public class User {
     
     private String birthDate; // Format: DD.MM.YYYY
     
+    @Column(name = "language", nullable = true)
+    private String language; // Til faqat handleLanguageState da belgilanadi
+    
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private UserState state = UserState.START;
     
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -49,6 +56,7 @@ public class User {
     
     public enum UserState {
         START,
+        WAITING_LANGUAGE,
         WAITING_CONTACT,
         WAITING_FIRST_NAME,
         WAITING_LAST_NAME,
