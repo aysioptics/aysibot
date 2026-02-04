@@ -128,8 +128,7 @@ public class KuponBot extends TelegramLongPollingBot {
             }
             case WAITING_LANGUAGE -> handleLanguageState(message, user, chatId);
             case WAITING_CONTACT -> handleContactState(message, user, chatId);
-            case WAITING_FIRST_NAME -> handleFirstNameState(message, user, chatId);
-            case WAITING_LAST_NAME -> handleLastNameState(message, user, chatId);
+            case WAITING_FULL_NAME -> handleFullNameState(message, user, chatId);
             case WAITING_BIRTH_DATE -> handleBirthDateState(message, user, chatId);
             case WAITING_CHANNEL_SUBSCRIPTION -> handleChannelSubscriptionState(message, user, chatId);
             case REGISTERED -> handleRegisteredUserCommands(message, user, chatId);
@@ -279,13 +278,13 @@ public class KuponBot extends TelegramLongPollingBot {
         
         if (message.hasContact()) {
             user.setPhoneNumber(message.getContact().getPhoneNumber());
-            user.setState(User.UserState.WAITING_FIRST_NAME);
+            user.setState(User.UserState.WAITING_FULL_NAME);
             userService.save(user);
             
             if ("ru".equals(lang)) {
-                sendMessage(chatId, "✅ Номер телефона принят!\n\nТеперь введите ваше имя:");
+                sendMessage(chatId, "✅ Номер телефона принят!\n\nТеперь введите ваше полное имя (имя и фамилию):");
             } else {
-                sendMessage(chatId, "✅ Telefon raqam qabul qilindi!\n\nEndi ismingizni kiriting:");
+                sendMessage(chatId, "✅ Telefon raqam qabul qilindi!\n\nEndi to'liq ismingizni kiriting (ism va familiya):");
             }
         } else {
             if ("ru".equals(lang)) {
@@ -304,78 +303,37 @@ public class KuponBot extends TelegramLongPollingBot {
         }
     }
 
-    private void handleFirstNameState(Message message, User user, Long chatId) {
+    private void handleFullNameState(Message message, User user, Long chatId) {
         if (message.hasText()) {
-            String firstName = message.getText().trim();
-            if (firstName.length() >= 2) {
-                user.setFirstName(firstName);
-                user.setState(User.UserState.WAITING_LAST_NAME);
-                userService.save(user);
-                
-                String successMessage;
-                
-                if ("ru".equals(user.getLanguage())) {
-                    successMessage = "✅ Имя принято!\n\nТеперь введите вашу фамилию:";
-                } else {
-                    successMessage = "✅ Ism qabul qilindi!\n\nEndi familiyangizni kiriting:";
-                }
-                
-                sendMessage(chatId, successMessage);
-            } else {
-                String errorMessage;
-                
-                if ("ru".equals(user.getLanguage())) {
-                    errorMessage = "❌ Имя должно содержать минимум 2 символа.";
-                } else {
-                    errorMessage = "❌ Ism kamida 2 ta harfdan iborat bo'lishi kerak.";
-                }
-                
-                sendMessage(chatId, errorMessage);
-            }
-        } else {
-            String errorMessage;
-            
-            if ("ru".equals(user.getLanguage())) {
-                errorMessage = "❌ Пожалуйста, отправьте ваше имя в текстовом виде.";
-            } else {
-                errorMessage = "❌ Iltimos, ismingizni matn ko'rinishida yuboring.";
-            }
-            
-            sendMessage(chatId, errorMessage);
-        }
-    }
-    
-    private void handleLastNameState(Message message, User user, Long chatId) {
-        if (message.hasText()) {
-            String lastName = message.getText().trim();
-            if (lastName.length() >= 2) {
-                user.setLastName(lastName);
+            String fullName = message.getText().trim();
+            if (fullName.length() >= 3 && fullName.contains(" ")) {
+                user.setFullName(fullName);
                 user.setState(User.UserState.WAITING_BIRTH_DATE);
                 userService.save(user);
                 
                 String successMessage;
                 if ("ru".equals(user.getLanguage())) {
-                    successMessage = "✅ Фамилия принята!\n\nТеперь введите дату рождения (в формате ДД.ММ.ГГГГ):\n\nПример: 15.03.1995";
+                    successMessage = "✅ Полное имя принято!\n\nТеперь введите дату рождения (в формате ДД.ММ.ГГГГ):\n\nПример: 15.03.1995";
                 } else {
-                    successMessage = "✅ Familiya qabul qilindi!\n\nEndi tug'ilgan sanangizni kiriting (DD.MM.YYYY formatida):\n\nMisol: 15.03.1995";
+                    successMessage = "✅ To'liq ism qabul qilindi!\n\nEndi tug'ilgan sanangizni kiriting (DD.MM.YYYY formatida):\n\nMisol: 15.03.1995";
                 }
                 
                 sendMessage(chatId, successMessage);
             } else {
                 String errorMessage;
                 if ("ru".equals(user.getLanguage())) {
-                    errorMessage = "❌ Фамилия должна содержать минимум 2 символа.";
+                    errorMessage = "❌ Пожалуйста, введите полное имя (имя и фамилию через пробел).\n\nПример: Иван Петров";
                 } else {
-                    errorMessage = "❌ Familiya kamida 2 ta harfdan iborat bo'lishi kerak.";
+                    errorMessage = "❌ Iltimos, to'liq ismingizni kiriting (ism va familiya bo'sh joy bilan).\n\nMisol: Akmal Karimov";
                 }
                 sendMessage(chatId, errorMessage);
             }
         } else {
             String errorMessage;
             if ("ru".equals(user.getLanguage())) {
-                errorMessage = "❌ Пожалуйста, отправьте фамилию в текстовом виде.";
+                errorMessage = "❌ Пожалуйста, отправьте ваше полное имя в текстовом виде.";
             } else {
-                errorMessage = "❌ Iltimos, familiyangizni matn ko'rinishida yuboring.";
+                errorMessage = "❌ Iltimos, to'liq ismingizni matn ko'rinishida yuboring.";
             }
             sendMessage(chatId, errorMessage);
         }

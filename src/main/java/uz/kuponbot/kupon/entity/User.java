@@ -37,9 +37,41 @@ public class User {
     @Column(nullable = true)
     private String phoneNumber;
     
-    private String firstName;
+    private String fullName; // To'liq ism-familiya
     
-    private String lastName;
+    // Backward compatibility uchun
+    public String getFirstName() {
+        if (fullName != null && fullName.contains(" ")) {
+            return fullName.split(" ")[0];
+        }
+        return fullName;
+    }
+    
+    public String getLastName() {
+        if (fullName != null && fullName.contains(" ")) {
+            String[] parts = fullName.split(" ");
+            if (parts.length > 1) {
+                return parts[parts.length - 1];
+            }
+        }
+        return "";
+    }
+    
+    public void setFirstName(String firstName) {
+        this.fullName = firstName;
+    }
+    
+    public void setLastName(String lastName) {
+        // Bu metod endi ishlatilmaydi, lekin backward compatibility uchun qoldiramiz
+    }
+    
+    public String getFullName() {
+        return fullName;
+    }
+    
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
     
     private String birthDate; // Format: DD.MM.YYYY
     
@@ -58,8 +90,7 @@ public class User {
         START,
         WAITING_LANGUAGE,
         WAITING_CONTACT,
-        WAITING_FIRST_NAME,
-        WAITING_LAST_NAME,
+        WAITING_FULL_NAME, // Eski WAITING_FIRST_NAME o'rniga
         WAITING_BIRTH_DATE,
         WAITING_CHANNEL_SUBSCRIPTION,
         REGISTERED

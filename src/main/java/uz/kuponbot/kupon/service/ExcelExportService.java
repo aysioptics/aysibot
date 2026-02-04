@@ -1,16 +1,25 @@
 package uz.kuponbot.kupon.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.stereotype.Service;
-import uz.kuponbot.kupon.dto.UserDto;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+
+import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import uz.kuponbot.kupon.dto.UserDto;
 
 @Service
 @RequiredArgsConstructor
@@ -133,8 +142,7 @@ public class ExcelExportService {
         return switch (state) {
             case "START" -> "Boshlangan";
             case "WAITING_CONTACT" -> "Telefon kutilmoqda";
-            case "WAITING_FIRST_NAME" -> "Ism kutilmoqda";
-            case "WAITING_LAST_NAME" -> "Familiya kutilmoqda";
+            case "WAITING_FULL_NAME" -> "To'liq ism kutilmoqda";
             case "WAITING_BIRTH_DATE" -> "Tug'ilgan sana kutilmoqda";
             case "WAITING_CHANNEL_SUBSCRIPTION" -> "Kanal obunasi kutilmoqda";
             case "REGISTERED" -> "Ro'yxatdan o'tgan";
