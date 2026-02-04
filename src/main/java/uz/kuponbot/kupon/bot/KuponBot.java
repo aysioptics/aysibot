@@ -17,6 +17,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -142,7 +143,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void sendWelcomeMessage(Long chatId) {
         String welcomeText = "🎉 Kupon botiga xush kelibsiz!\n\n" +
-                "Iltimos, tilni tanlang / Пожалуйста, выберите язык:";
+                "Iltimos, tilni tanlang / Пожалуйста, выберите язык / Илтимос, тилни танланг:";
         
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
@@ -158,12 +159,18 @@ public class KuponBot extends TelegramLongPollingBot {
         keyboardMarkup.setOneTimeKeyboard(true);
         
         List<KeyboardRow> keyboard = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
         
-        row.add("🇺🇿 O'zbek tili");
-        row.add("🇷🇺 Русский язык");
+        // Birinchi qator - O'zbek tillar
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("🇺🇿 O'zbek (lotin)");
+        row1.add("🇺🇿 Ўзбек (кирил)");
         
-        keyboard.add(row);
+        // Ikkinchi qator - Rus tili
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("🇷🇺 Русский язык");
+        
+        keyboard.add(row1);
+        keyboard.add(row2);
         keyboardMarkup.setKeyboard(keyboard);
         
         return keyboardMarkup;
@@ -192,6 +199,13 @@ public class KuponBot extends TelegramLongPollingBot {
         return keyboardMarkup;
     }
     
+    // ✅ Keyboard ni olib tashlash uchun metod
+    private ReplyKeyboardRemove createRemoveKeyboard() {
+        ReplyKeyboardRemove keyboardRemove = new ReplyKeyboardRemove();
+        keyboardRemove.setRemoveKeyboard(true);
+        return keyboardRemove;
+    }
+    
     private void handleLanguageState(Message message, User user, Long chatId) {
         log.info("handleLanguageState called for user {} with current language: {}", user.getTelegramId(), user.getLanguage());
         
@@ -199,22 +213,26 @@ public class KuponBot extends TelegramLongPollingBot {
             String text = message.getText();
             log.info("User {} sent text: '{}'", user.getTelegramId(), text);
             
-            if ("🇺🇿 O'zbek tili".equals(text)) {
-                log.info("User {} selected Uzbek language", user.getTelegramId());
-                log.info("Before setting language: {}", user.getLanguage());
+            if ("🇺🇿 O'zbek (lotin)".equals(text)) {
+                log.info("User {} selected Uzbek Latin language", user.getTelegramId());
                 user.setLanguage("uz");
                 user.setState(User.UserState.WAITING_CONTACT);
-                log.info("After setting language: {}", user.getLanguage());
                 User savedUser = userService.save(user);
                 log.info("User {} language saved as: {}", savedUser.getTelegramId(), savedUser.getLanguage());
                 
                 sendContactRequestMessage(chatId, "uz");
+            } else if ("🇺🇿 Ўзбек (кирил)".equals(text)) {
+                log.info("User {} selected Uzbek Cyrillic language", user.getTelegramId());
+                user.setLanguage("uz_cyrl");
+                user.setState(User.UserState.WAITING_CONTACT);
+                User savedUser = userService.save(user);
+                log.info("User {} language saved as: {}", savedUser.getTelegramId(), savedUser.getLanguage());
+                
+                sendContactRequestMessage(chatId, "uz_cyrl");
             } else if ("🇷🇺 Русский язык".equals(text)) {
                 log.info("User {} selected Russian language", user.getTelegramId());
-                log.info("Before setting language: {}", user.getLanguage());
                 user.setLanguage("ru");
                 user.setState(User.UserState.WAITING_CONTACT);
-                log.info("After setting language: {}", user.getLanguage());
                 User savedUser = userService.save(user);
                 log.info("User {} language saved as: {}", savedUser.getTelegramId(), savedUser.getLanguage());
                 
@@ -223,40 +241,58 @@ public class KuponBot extends TelegramLongPollingBot {
                 // Foydalanuvchining hozirgi tilini tekshirish
                 log.info("User {} sent invalid language selection: {}, current language: {}", 
                     user.getTelegramId(), text, user.getLanguage());
-                String errorMessage = "Iltimos, tilni tanlang / Пожалуйста, выберите язык";
-                if ("ru".equals(user.getLanguage())) {
-                    errorMessage = "Пожалуйста, выберите язык";
-                } else if ("uz".equals(user.getLanguage())) {
-                    errorMessage = "Iltimos, tilni tanlang";
-                }
+                String errorMessage = getLocalizedMessage(user.getLanguage(),
+                    "Iltimos, tilni tanlang",
+                    "Илтимос, тилни танланг", 
+                    "Пожалуйста, выберите язык");
                 sendMessage(chatId, errorMessage);
             }
         } else {
             // Foydalanuvchining hozirgi tilini tekshirish
             log.info("User {} sent non-text message in language state, current language: {}", 
                 user.getTelegramId(), user.getLanguage());
-            String errorMessage = "Iltimos, tilni tanlang / Пожалуйста, выберите язык";
-            if ("ru".equals(user.getLanguage())) {
-                errorMessage = "Пожалуйста, выберите язык";
-            } else if ("uz".equals(user.getLanguage())) {
-                errorMessage = "Iltimos, tilni tanlang";
-            }
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "Iltimos, tilni tanlang",
+                "Илтимос, тилни танланг", 
+                "Пожалуйста, выберите язык");
             sendMessage(chatId, errorMessage);
         }
+    }
+    
+    // Helper metod - uch tilli xabarlar uchun
+    private String getLocalizedMessage(String language, String uzMessage, String uzCyrlMessage, String ruMessage) {
+        return switch (language) {
+            case "uz_cyrl" -> uzCyrlMessage;
+            case "ru" -> ruMessage;
+            default -> uzMessage; // "uz" yoki null uchun
+        };
     }
     
     private void sendContactRequestMessage(Long chatId, String language) {
         String contactText;
         String buttonText;
         
-        if ("uz".equals(language)) {
-            contactText = "✅ Til tanlandi: O'zbek tili\n\n" +
-                    "Ro'yxatdan o'tish uchun telefon raqamingizni yuboring.";
-            buttonText = "📱 Telefon raqamni yuborish";
-        } else {
-            contactText = "✅ Язык выбран: Русский\n\n" +
-                    "Для регистрации отправьте свой номер телефона.";
-            buttonText = "📱 Отправить номер телефона";
+        switch (language) {
+            case "uz" -> {
+                contactText = "✅ Til tanlandi: O'zbek (lotin)\n\n" +
+                        "Ro'yxatdan o'tish uchun telefon raqamingizni yuboring.";
+                buttonText = "📱 Telefon raqamni yuborish";
+            }
+            case "uz_cyrl" -> {
+                contactText = "✅ Тил танланди: Ўзбек (кирил)\n\n" +
+                        "Рўйхатдан ўтиш учун телефон рақамингизни юборинг.";
+                buttonText = "📱 Телефон рақамни юбориш";
+            }
+            case "ru" -> {
+                contactText = "✅ Язык выбран: Русский\n\n" +
+                        "Для регистрации отправьте свой номер телефона.";
+                buttonText = "📱 Отправить номер телефона";
+            }
+            default -> {
+                contactText = "✅ Til tanlandi: O'zbek (lotin)\n\n" +
+                        "Ro'yxatdan o'tish uchun telefon raqamingizni yuboring.";
+                buttonText = "📱 Telefon raqamni yuborish";
+            }
         }
         
         log.info("Sending contact request message to chatId: {} with language: {}", chatId, language);
@@ -281,25 +317,33 @@ public class KuponBot extends TelegramLongPollingBot {
             user.setState(User.UserState.WAITING_FULL_NAME);
             userService.save(user);
             
-            if ("ru".equals(lang)) {
-                sendMessage(chatId, "✅ Номер телефона принят!\n\nТеперь введите ваше полное имя (имя и фамилию):");
-            } else {
-                sendMessage(chatId, "✅ Telefon raqam qabul qilindi!\n\nEndi to'liq ismingizni kiriting (ism va familiya):");
-            }
+            String successMessage = getLocalizedMessage(lang,
+                "✅ Telefon raqam qabul qilindi!\n\nEndi to'liq ismingizni kiriting (ism va familiya):",
+                "✅ Телефон рақам қабул қилинди!\n\nЭнди тўлиқ исмингизни киритинг (исм ва фамилия):",
+                "✅ Номер телефона принят!\n\nТеперь введите ваше полное имя (имя и фамилию):");
+            
+            // ✅ MUHIM: Keyboard ni olib tashlash
+            SendMessage sendMessage = new SendMessage();
+            sendMessage.setChatId(chatId);
+            sendMessage.setText(successMessage);
+            sendMessage.setReplyMarkup(createRemoveKeyboard()); // Keyboard ni olib tashlash
+            sendMessage(sendMessage);
         } else {
-            if ("ru".equals(lang)) {
-                SendMessage sm = new SendMessage();
-                sm.setChatId(chatId);
-                sm.setText("❌ Пожалуйста, нажмите кнопку отправки номера телефона.");
-                sm.setReplyMarkup(createContactKeyboard("📱 Отправить номер телефона"));
-                sendMessage(sm);
-            } else {
-                SendMessage sm = new SendMessage();
-                sm.setChatId(chatId);
-                sm.setText("❌ Iltimos, telefon raqamingizni yuborish tugmasini bosing.");
-                sm.setReplyMarkup(createContactKeyboard("📱 Telefon raqamni yuborish"));
-                sendMessage(sm);
-            }
+            String errorMessage = getLocalizedMessage(lang,
+                "❌ Iltimos, telefon raqamingizni yuborish tugmasini bosing.",
+                "❌ Илтимос, телефон рақамингизни юбориш тугмасини босинг.",
+                "❌ Пожалуйста, нажмите кнопку отправки номера телефона.");
+            
+            String buttonText = getLocalizedMessage(lang,
+                "📱 Telefon raqamni yuborish",
+                "📱 Телефон рақамни юбориш",
+                "📱 Отправить номер телефона");
+            
+            SendMessage sm = new SendMessage();
+            sm.setChatId(chatId);
+            sm.setText(errorMessage);
+            sm.setReplyMarkup(createContactKeyboard(buttonText));
+            sendMessage(sm);
         }
     }
 
@@ -311,31 +355,42 @@ public class KuponBot extends TelegramLongPollingBot {
                 user.setState(User.UserState.WAITING_BIRTH_DATE);
                 userService.save(user);
                 
-                String successMessage;
-                if ("ru".equals(user.getLanguage())) {
-                    successMessage = "✅ Полное имя принято!\n\nТеперь введите дату рождения (в формате ДД.ММ.ГГГГ):\n\nПример: 15.03.1995";
-                } else {
-                    successMessage = "✅ To'liq ism qabul qilindi!\n\nEndi tug'ilgan sanangizni kiriting (DD.MM.YYYY formatida):\n\nMisol: 15.03.1995";
-                }
+                String successMessage = getLocalizedMessage(user.getLanguage(),
+                    "✅ To'liq ism qabul qilindi!\n\nEndi tug'ilgan sanangizni kiriting (DD.MM.YYYY formatida):\n\nMisol: 15.03.1995",
+                    "✅ Тўлиқ исм қабул қилинди!\n\nЭнди туғилган санангизни киритинг (DD.MM.YYYY форматида):\n\nМисол: 15.03.1995",
+                    "✅ Полное имя принято!\n\nТеперь введите дату рождения (в формате ДД.ММ.ГГГГ):\n\nПример: 15.03.1995");
                 
-                sendMessage(chatId, successMessage);
+                // ✅ MUHIM: Keyboard ni olib tashlash
+                SendMessage sendMessage = new SendMessage();
+                sendMessage.setChatId(chatId);
+                sendMessage.setText(successMessage);
+                sendMessage.setReplyMarkup(createRemoveKeyboard()); // Keyboard ni olib tashlash
+                sendMessage(sendMessage);
             } else {
-                String errorMessage;
-                if ("ru".equals(user.getLanguage())) {
-                    errorMessage = "❌ Пожалуйста, введите полное имя (имя и фамилию через пробел).\n\nПример: Иван Петров";
-                } else {
-                    errorMessage = "❌ Iltimos, to'liq ismingizni kiriting (ism va familiya bo'sh joy bilan).\n\nMisol: Akmal Karimov";
-                }
-                sendMessage(chatId, errorMessage);
+                String errorMessage = getLocalizedMessage(user.getLanguage(),
+                    "❌ Iltimos, to'liq ismingizni kiriting (ism va familiya bo'sh joy bilan).\n\nMisol: Akmal Karimov",
+                    "❌ Илтимос, тўлиқ исмингизни киритинг (исм ва фамилия бўш жой билан).\n\nМисол: Акмал Каримов",
+                    "❌ Пожалуйста, введите полное имя (имя и фамилию через пробел).\n\nПример: Иван Петров");
+                
+                // ✅ MUHIM: Keyboard ni olib tashlash
+                SendMessage sendMessage = new SendMessage();
+                sendMessage.setChatId(chatId);
+                sendMessage.setText(errorMessage);
+                sendMessage.setReplyMarkup(createRemoveKeyboard()); // Keyboard ni olib tashlash
+                sendMessage(sendMessage);
             }
         } else {
-            String errorMessage;
-            if ("ru".equals(user.getLanguage())) {
-                errorMessage = "❌ Пожалуйста, отправьте ваше полное имя в текстовом виде.";
-            } else {
-                errorMessage = "❌ Iltimos, to'liq ismingizni matn ko'rinishida yuboring.";
-            }
-            sendMessage(chatId, errorMessage);
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Iltimos, to'liq ismingizni matn ko'rinishida yuboring.",
+                "❌ Илтимос, тўлиқ исмингизни матн кўринишида юборинг.",
+                "❌ Пожалуйста, отправьте ваше полное имя в текстовом виде.");
+            
+            // ✅ MUHIM: Keyboard ni olib tashlash
+            SendMessage sendMessage = new SendMessage();
+            sendMessage.setChatId(chatId);
+            sendMessage.setText(errorMessage);
+            sendMessage.setReplyMarkup(createRemoveKeyboard()); // Keyboard ni olib tashlash
+            sendMessage(sendMessage);
         }
     }
     
@@ -350,22 +405,30 @@ public class KuponBot extends TelegramLongPollingBot {
                 
                 sendChannelSubscriptionMessage(chatId, user.getLanguage());
             } else {
-                String errorMessage;
-                if ("ru".equals(user.getLanguage())) {
-                    errorMessage = "❌ Неправильный формат даты. Пожалуйста, введите в формате ДД.ММ.ГГГГ.\n\nПример: 15.03.1995";
-                } else {
-                    errorMessage = "❌ Noto'g'ri sana formati. Iltimos, DD.MM.YYYY formatida kiriting.\n\nMisol: 15.03.1995";
-                }
-                sendMessage(chatId, errorMessage);
+                String errorMessage = getLocalizedMessage(user.getLanguage(),
+                    "❌ Noto'g'ri sana formati. Iltimos, DD.MM.YYYY formatida kiriting.\n\nMisol: 15.03.1995",
+                    "❌ Нотўғри сана формати. Илтимос, DD.MM.YYYY форматида киритинг.\n\nМисол: 15.03.1995",
+                    "❌ Неправильный формат даты. Пожалуйста, введите в формате ДД.ММ.ГГГГ.\n\nПример: 15.03.1995");
+                
+                // ✅ MUHIM: Keyboard ni olib tashlash
+                SendMessage sendMessage = new SendMessage();
+                sendMessage.setChatId(chatId);
+                sendMessage.setText(errorMessage);
+                sendMessage.setReplyMarkup(createRemoveKeyboard()); // Keyboard ni olib tashlash
+                sendMessage(sendMessage);
             }
         } else {
-            String errorMessage;
-            if ("ru".equals(user.getLanguage())) {
-                errorMessage = "❌ Пожалуйста, отправьте дату рождения в текстовом виде.";
-            } else {
-                errorMessage = "❌ Iltimos, tug'ilgan sanangizni matn ko'rinishida yuboring.";
-            }
-            sendMessage(chatId, errorMessage);
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Iltimos, tug'ilgan sanangizni matn ko'rinishida yuboring.",
+                "❌ Илтимос, туғилган санангизни матн кўринишида юборинг.",
+                "❌ Пожалуйста, отправьте дату рождения в текстовом виде.");
+            
+            // ✅ MUHIM: Keyboard ni olib tashlash
+            SendMessage sendMessage = new SendMessage();
+            sendMessage.setChatId(chatId);
+            sendMessage.setText(errorMessage);
+            sendMessage.setReplyMarkup(createRemoveKeyboard()); // Keyboard ni olib tashlash
+            sendMessage(sendMessage);
         }
     }
     
@@ -386,36 +449,55 @@ public class KuponBot extends TelegramLongPollingBot {
         String subscriptionMessage;
         String buttonText;
         
-        if ("ru".equals(language)) {
-            subscriptionMessage = String.format(
-                """
-                ✅ Дата рождения принята!
-                
-                📢 Для завершения регистрации подпишитесь на наш канал:
-                
-                👇 Нажмите на ссылку ниже, перейдите в канал и подпишитесь:
-                %s
-                
-                После подписки нажмите кнопку "✅ Проверить подписку".
-                """,
-                "https://t.me/" + channelUsername.replace("@", "")
-            );
-            buttonText = "✅ Проверить подписку";
-        } else {
-            subscriptionMessage = String.format(
-                """
-                ✅ Tug'ilgan sana qabul qilindi!
-                
-                📢 Ro'yxatdan o'tishni yakunlash uchun bizning kanalimizga obuna bo'ling:
-                
-                👇 Quyidagi havolani bosib kanalga o'ting va obuna bo'ling:
-                %s
-                
-                Obuna bo'lgandan keyin "✅ Obunani tekshirish" tugmasini bosing.
-                """,
-                "https://t.me/" + channelUsername.replace("@", "")
-            );
-            buttonText = "✅ Obunani tekshirish";
+        switch (language) {
+            case "uz_cyrl" -> {
+                subscriptionMessage = String.format(
+                    """
+                    ✅ Туғилган сана қабул қилинди!
+                    
+                    📢 Рўйхатдан ўтишни якунлаш учун бизнинг каналимизга обуна бўлинг:
+                    
+                    👇 Қуйидаги ҳаволани босиб каналга ўтинг ва обуна бўлинг:
+                    %s
+                    
+                    Обуна бўлгандан кейин "✅ Обунани текшириш" тугмасини босинг.
+                    """,
+                    "https://t.me/" + channelUsername.replace("@", "")
+                );
+                buttonText = "✅ Обунани текшириш";
+            }
+            case "ru" -> {
+                subscriptionMessage = String.format(
+                    """
+                    ✅ Дата рождения принята!
+                    
+                    📢 Для завершения регистрации подпишитесь на наш канал:
+                    
+                    👇 Нажмите на ссылку ниже, перейдите в канал и подпишитесь:
+                    %s
+                    
+                    После подписки нажмите кнопку "✅ Проверить подписку".
+                    """,
+                    "https://t.me/" + channelUsername.replace("@", "")
+                );
+                buttonText = "✅ Проверить подписку";
+            }
+            default -> {
+                subscriptionMessage = String.format(
+                    """
+                    ✅ Tug'ilgan sana qabul qilindi!
+                    
+                    📢 Ro'yxatdan o'tishni yakunlash uchun bizning kanalimizga obuna bo'ling:
+                    
+                    👇 Quyidagi havolani bosib kanalga o'ting va obuna bo'ling:
+                    %s
+                    
+                    Obuna bo'lgandan keyin "✅ Obunani tekshirish" tugmasini bosing.
+                    """,
+                    "https://t.me/" + channelUsername.replace("@", "")
+                );
+                buttonText = "✅ Obunani tekshirish";
+            }
         }
         
         SendMessage sendMessage = new SendMessage();
@@ -445,9 +527,12 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void handleChannelSubscriptionState(Message message, User user, Long chatId) {
         String checkButtonUz = "✅ Obunani tekshirish";
+        String checkButtonUzCyrl = "✅ Обунани текшириш";
         String checkButtonRu = "✅ Проверить подписку";
         
-        if (message.hasText() && (message.getText().equals(checkButtonUz) || message.getText().equals(checkButtonRu))) {
+        if (message.hasText() && (message.getText().equals(checkButtonUz) || 
+                                  message.getText().equals(checkButtonUzCyrl) || 
+                                  message.getText().equals(checkButtonRu))) {
             if (checkChannelSubscription(user.getTelegramId())) {
                 // Obuna tasdiqlandi - kupon yaratish
                 user.setState(User.UserState.REGISTERED);
@@ -455,9 +540,36 @@ public class KuponBot extends TelegramLongPollingBot {
                 
                 Coupon coupon = couponService.createCouponForUser(user);
                 
-                String successMessage;
-                if ("ru".equals(user.getLanguage())) {
-                    successMessage = String.format(
+                String successMessage = getLocalizedMessage(user.getLanguage(),
+                    String.format(
+                        "🎉 Tabriklaymiz! Ro'yxatdan o'tish muvaffaqiyatli yakunlandi!\n\n" +
+                        "� Ism: %s\n" +
+                        "👤 Familiya: %s\n" +
+                        "📱 Telefon: %s\n" +
+                        "🎂 Tug'ilgan sana: %s\n\n" +
+                        "🎫 Sizning kupon kodingiz: *%s*\n\n" +
+                        "Bu kodni saqlang va kerak bo'lganda ishlatishingiz mumkin!",
+                        user.getFirstName(), 
+                        user.getLastName(), 
+                        user.getPhoneNumber(),
+                        user.getBirthDate(),
+                        coupon.getCode()
+                    ),
+                    String.format(
+                        "🎉 Табриклаймиз! Рўйхатдан ўтиш муваффақиятли якунланди!\n\n" +
+                        "👤 Исм: %s\n" +
+                        "👤 Фамилия: %s\n" +
+                        "📱 Телефон: %s\n" +
+                        "🎂 Туғилган сана: %s\n\n" +
+                        "🎫 Сизнинг купон кодингиз: *%s*\n\n" +
+                        "Бу кодни сақланг ва керак бўлганда ишлатишингиз мумкин!",
+                        user.getFirstName(), 
+                        user.getLastName(), 
+                        user.getPhoneNumber(),
+                        user.getBirthDate(),
+                        coupon.getCode()
+                    ),
+                    String.format(
                         "🎉 Поздравляем! Регистрация успешно завершена!\n\n" +
                         "👤 Имя: %s\n" +
                         "👤 Фамилия: %s\n" +
@@ -470,23 +582,8 @@ public class KuponBot extends TelegramLongPollingBot {
                         user.getPhoneNumber(),
                         user.getBirthDate(),
                         coupon.getCode()
-                    );
-                } else {
-                    successMessage = String.format(
-                        "🎉 Tabriklaymiz! Ro'yxatdan o'tish muvaffaqiyatli yakunlandi!\n\n" +
-                        "👤 Ism: %s\n" +
-                        "👤 Familiya: %s\n" +
-                        "📱 Telefon: %s\n" +
-                        "🎂 Tug'ilgan sana: %s\n\n" +
-                        "🎫 Sizning kupon kodingiz: *%s*\n\n" +
-                        "Bu kodni saqlang va kerak bo'lganda ishlatishingiz mumkin!",
-                        user.getFirstName(), 
-                        user.getLastName(), 
-                        user.getPhoneNumber(),
-                        user.getBirthDate(),
-                        coupon.getCode()
-                    );
-                }
+                    )
+                );
                 
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(chatId);
@@ -496,23 +593,20 @@ public class KuponBot extends TelegramLongPollingBot {
                 
                 sendMessage(sendMessage);
             } else {
-                String errorMessage;
-                if ("ru".equals(user.getLanguage())) {
-                    errorMessage = "❌ Вы еще не подписались на канал!\n\n" +
-                        "Пожалуйста, сначала подпишитесь на канал, затем нажмите \"✅ Проверить подписку\".";
-                } else {
-                    errorMessage = "❌ Siz hali kanalga obuna bo'lmagansiz!\n\n" +
-                        "Iltimos, avval kanalga obuna bo'ling, keyin \"✅ Obunani tekshirish\" tugmasini bosing.";
-                }
+                String errorMessage = getLocalizedMessage(user.getLanguage(),
+                    "❌ Siz hali kanalga obuna bo'lmagansiz!\n\n" +
+                    "Iltimos, avval kanalga obuna bo'ling, keyin \"✅ Obunani tekshirish\" tugmasini bosing.",
+                    "❌ Сиз ҳали каналга обуна бўлмагансиз!\n\n" +
+                    "Илтимос, аввал каналга обуна бўлинг, кейин \"✅ Обунани текшириш\" тугмасини босинг.",
+                    "❌ Вы еще не подписались на канал!\n\n" +
+                    "Пожалуйста, сначала подпишитесь на канал, затем нажмите \"✅ Проверить подписку\".");
                 sendMessage(chatId, errorMessage);
             }
         } else {
-            String errorMessage;
-            if ("ru".equals(user.getLanguage())) {
-                errorMessage = "❌ Пожалуйста, сначала подпишитесь на канал и нажмите \"✅ Проверить подписку\".";
-            } else {
-                errorMessage = "❌ Iltimos, avval kanalga obuna bo'ling va \"✅ Obunani tekshirish\" tugmasini bosing.";
-            }
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Iltimos, avval kanalga obuna bo'ling va \"✅ Obunani tekshirish\" tugmasini bosing.",
+                "❌ Илтимос, аввал каналга обуна бўлинг ва \"✅ Обунани текшириш\" тугмасини босинг.",
+                "❌ Пожалуйста, сначала подпишитесь на канал и нажмите \"✅ Проверить подписку\".");
             sendMessage(chatId, errorMessage);
         }
     }
@@ -543,18 +637,28 @@ public class KuponBot extends TelegramLongPollingBot {
         KeyboardRow row1 = new KeyboardRow();
         KeyboardRow row2 = new KeyboardRow();
         
-        if ("ru".equals(language)) {
-            row1.add("🛒 Магазин");
-            row1.add("📦 Мои заказы");
-            
-            row2.add("👤 Профиль");
-            row2.add("ℹ️ Помощь");
-        } else {
-            row1.add("🛒 Do'kon");
-            row1.add("📦 Buyurtmalarim");
-            
-            row2.add("👤 Profil");
-            row2.add("ℹ️ Yordam");
+        switch (language) {
+            case "uz_cyrl" -> {
+                row1.add("🛒 Дўкон");
+                row1.add("📦 Буюртмаларим");
+                
+                row2.add("👤 Профил");
+                row2.add("ℹ️ Ёрдам");
+            }
+            case "ru" -> {
+                row1.add("🛒 Магазин");
+                row1.add("📦 Мои заказы");
+                
+                row2.add("👤 Профиль");
+                row2.add("ℹ️ Помощь");
+            }
+            default -> {
+                row1.add("🛒 Do'kon");
+                row1.add("📦 Buyurtmalarim");
+                
+                row2.add("👤 Profil");
+                row2.add("ℹ️ Yordam");
+            }
         }
         
         keyboard.add(row1);
@@ -572,11 +676,17 @@ public class KuponBot extends TelegramLongPollingBot {
         String text = message.getText();
         
         switch (text) {
-            // Uzbek menu items
+            // Uzbek Latin menu items
             case "🛒 Do'kon" -> openShop(chatId, user.getLanguage());
             case "📦 Buyurtmalarim" -> showUserOrders(user, chatId);
             case "👤 Profil" -> showUserProfile(user, chatId);
             case "ℹ️ Yordam" -> showHelp(chatId, user.getLanguage());
+            
+            // Uzbek Cyrillic menu items
+            case "🛒 Дўкон" -> openShop(chatId, user.getLanguage());
+            case "📦 Буюртмаларим" -> showUserOrders(user, chatId);
+            case "👤 Профил" -> showUserProfile(user, chatId);
+            case "ℹ️ Ёрдам" -> showHelp(chatId, user.getLanguage());
             
             // Russian menu items
             case "🛒 Магазин" -> openShop(chatId, user.getLanguage());
@@ -588,9 +698,10 @@ public class KuponBot extends TelegramLongPollingBot {
             case "/start" -> sendRegisteredUserWelcome(user, chatId);
             case "/admin" -> handleAdminCommand(user, chatId);
             case "/myid" -> {
-                String idMessage = "ru".equals(user.getLanguage()) ? 
-                    "🆔 Ваш Telegram ID: " + user.getTelegramId() :
-                    "🆔 Sizning Telegram ID: " + user.getTelegramId();
+                String idMessage = getLocalizedMessage(user.getLanguage(),
+                    "🆔 Sizning Telegram ID: " + user.getTelegramId(),
+                    "🆔 Сизнинг Telegram ID: " + user.getTelegramId(),
+                    "🆔 Ваш Telegram ID: " + user.getTelegramId());
                 sendMessage(chatId, idMessage);
             }
             case "/testnotify" -> handleTestNotificationCommand(user, chatId);
@@ -599,9 +710,10 @@ public class KuponBot extends TelegramLongPollingBot {
             case "/test3minute" -> handleTest3MinuteCommand(user, chatId);
             case "/broadcast" -> handleBroadcastCommand(message, user, chatId);
             default -> {
-                String errorMessage = "ru".equals(user.getLanguage()) ? 
-                    "❌ Неизвестная команда. Пожалуйста, выберите из меню." :
-                    "❌ Noma'lum buyruq. Iltimos, menyudan tanlang.";
+                String errorMessage = getLocalizedMessage(user.getLanguage(),
+                    "❌ Noma'lum buyruq. Iltimos, menyudan tanlang.",
+                    "❌ Номаълум буйруқ. Илтимос, менюдан танланг.",
+                    "❌ Неизвестная команда. Пожалуйста, выберите из меню.");
                 sendMessage(chatId, errorMessage);
             }
         }
@@ -611,30 +723,29 @@ public class KuponBot extends TelegramLongPollingBot {
         List<Coupon> coupons = couponService.getUserCoupons(user);
         
         if (coupons.isEmpty()) {
-            String emptyMessage = "ru".equals(user.getLanguage()) ? 
-                "❌ У вас пока нет купонов." :
-                "❌ Sizda hozircha kuponlar yo'q.";
+            String emptyMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Sizda hozircha kuponlar yo'q.",
+                "❌ Сизда ҳозирча купонлар йўқ.",
+                "❌ У вас пока нет купонов.");
             sendMessage(chatId, emptyMessage);
             return;
         }
         
         StringBuilder message = new StringBuilder();
-        if ("ru".equals(user.getLanguage())) {
-            message.append("🎫 Ваши купоны:\n\n");
-        } else {
-            message.append("🎫 Sizning kuponlaringiz:\n\n");
-        }
+        String headerMessage = getLocalizedMessage(user.getLanguage(),
+            "🎫 Sizning kuponlaringiz:\n\n",
+            "🎫 Сизнинг купонларингиз:\n\n",
+            "🎫 Ваши купоны:\n\n");
+        message.append(headerMessage);
         
         for (int i = 0; i < coupons.size(); i++) {
             Coupon coupon = coupons.get(i);
-            String status;
-            if ("ru".equals(user.getLanguage())) {
-                status = coupon.getStatus() == Coupon.CouponStatus.ACTIVE ? "✅ Активен" : "❌ Использован";
-            } else {
-                status = coupon.getStatus() == Coupon.CouponStatus.ACTIVE ? "✅ Faol" : "❌ Ishlatilgan";
-            }
+            String status = getLocalizedMessage(user.getLanguage(),
+                coupon.getStatus() == Coupon.CouponStatus.ACTIVE ? "✅ Faol" : "❌ Ishlatilgan",
+                coupon.getStatus() == Coupon.CouponStatus.ACTIVE ? "✅ Фаол" : "❌ Ишлатилган",
+                coupon.getStatus() == Coupon.CouponStatus.ACTIVE ? "✅ Активен" : "❌ Использован");
             
-            String codeLabel = "ru".equals(user.getLanguage()) ? "Код" : "Kod";
+            String codeLabel = getLocalizedMessage(user.getLanguage(), "Kod", "Код", "Код");
             message.append(String.format("%d. %s: *%s* - %s\n", i + 1, codeLabel, coupon.getCode(), status));
         }
         
@@ -649,18 +760,20 @@ public class KuponBot extends TelegramLongPollingBot {
     private void generateNewCoupon(User user, Long chatId) {
         Coupon newCoupon = couponService.createCouponForUser(user);
         
-        String message;
-        if ("ru".equals(user.getLanguage())) {
-            message = String.format(
-                "🎉 Новый купон создан!\n\n🎫 Код купона: *%s*\n\nСохраните этот код!",
-                newCoupon.getCode()
-            );
-        } else {
-            message = String.format(
+        String message = getLocalizedMessage(user.getLanguage(),
+            String.format(
                 "🎉 Yangi kupon yaratildi!\n\n🎫 Kupon kodi: *%s*\n\nBu kodni saqlang!",
                 newCoupon.getCode()
-            );
-        }
+            ),
+            String.format(
+                "🎉 Янги купон яратилди!\n\n🎫 Купон коди: *%s*\n\nБу кодни сақланг!",
+                newCoupon.getCode()
+            ),
+            String.format(
+                "🎉 Новый купон создан!\n\n🎫 Код купона: *%s*\n\nСохраните этот код!",
+                newCoupon.getCode()
+            )
+        );
         
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
@@ -723,31 +836,38 @@ public class KuponBot extends TelegramLongPollingBot {
     }
     
     private void showHelp(Long chatId, String language) {
-        String helpMessage;
-        
-        if ("ru".equals(language)) {
-            helpMessage = """
-                ℹ️ Помощь:
-                
-                🛒 Магазин - просмотр каталога очков и покупки
-                📦 Мои заказы - история заказов
-                👤 Профиль - просмотр личной информации
-                ℹ️ Помощь - это сообщение помощи
-                
-                Если есть вопросы, свяжитесь с администратором.
-                """;
-        } else {
-            helpMessage = """
-                ℹ️ Yordam:
-                
-                🛒 Do'kon - ko'zoynaklar katalogini ko'rish va xarid qilish
-                📦 Buyurtmalarim - buyurtmalar tarixi
-                👤 Profil - shaxsiy ma'lumotlaringizni ko'rish
-                ℹ️ Yordam - bu yordam xabari
-                
-                Savollar bo'lsa, admin bilan bog'laning.
-                """;
-        }
+        String helpMessage = getLocalizedMessage(language,
+            """
+            ℹ️ Yordam:
+            
+            🛒 Do'kon - ko'zoynaklar katalogini ko'rish va xarid qilish
+            📦 Buyurtmalarim - buyurtmalar tarixi
+            👤 Profil - shaxsiy ma'lumotlaringizni ko'rish
+            ℹ️ Yordam - bu yordam xabari
+            
+            Savollar bo'lsa, admin bilan bog'laning.
+            """,
+            """
+            ℹ️ Ёрдам:
+            
+            🛒 Дўкон - кўзойнаклар каталогини кўриш ва харид қилиш
+            📦 Буюртмаларим - буюртмалар тарихи
+            👤 Профил - шахсий маълумотларингизни кўриш
+            ℹ️ Ёрдам - бу ёрдам хабари
+            
+            Саволлар бўлса, админ билан боғланинг.
+            """,
+            """
+            ℹ️ Помощь:
+            
+            🛒 Магазин - просмотр каталога очков и покупки
+            📦 Мои заказы - история заказов
+            👤 Профиль - просмотр личной информации
+            ℹ️ Помощь - это сообщение помощи
+            
+            Если есть вопросы, свяжитесь с администратором.
+            """
+        );
         
         sendMessage(chatId, helpMessage);
     }
@@ -756,24 +876,37 @@ public class KuponBot extends TelegramLongPollingBot {
         String shopMessage;
         String buttonText;
         
-        if ("ru".equals(language)) {
-            shopMessage = """
-                🛒 Магазин очков
-                
-                В нашем магазине представлены самые качественные очки!
-                
-                Нажмите кнопку ниже, чтобы открыть магазин:
-                """;
-            buttonText = "🛒 Открыть магазин";
-        } else {
-            shopMessage = """
-                🛒 Ko'zoynak Do'koni
-                
-                Bizning do'konimizda eng sifatli ko'zoynaklar mavjud!
-                
-                Do'konni ochish uchun quyidagi tugmani bosing:
-                """;
-            buttonText = "🛒 Do'konni ochish";
+        switch (language) {
+            case "uz_cyrl" -> {
+                shopMessage = """
+                    🛒 Кўзойнак Дўкони
+                    
+                    Бизнинг дўконимизда энг сифатли кўзойнаклар мавжуд!
+                    
+                    Дўконни очиш учун қуйидаги тугмани босинг:
+                    """;
+                buttonText = "🛒 Дўконни очиш";
+            }
+            case "ru" -> {
+                shopMessage = """
+                    🛒 Магазин очков
+                    
+                    В нашем магазине представлены самые качественные очки!
+                    
+                    Нажмите кнопку ниже, чтобы открыть магазин:
+                    """;
+                buttonText = "🛒 Открыть магазин";
+            }
+            default -> {
+                shopMessage = """
+                    🛒 Ko'zoynak Do'koni
+                    
+                    Bizning do'konimizda eng sifatli ko'zoynaklar mavjud!
+                    
+                    Do'konni ochish uchun quyidagi tugmani bosing:
+                    """;
+                buttonText = "🛒 Do'konni ochish";
+            }
         }
         
         SendMessage sendMessage = new SendMessage();
@@ -806,43 +939,48 @@ public class KuponBot extends TelegramLongPollingBot {
         List<Order> userOrders = orderService.getUserOrders(user);
         
         if (userOrders.isEmpty()) {
-            String ordersMessage;
-            if ("ru".equals(user.getLanguage())) {
-                ordersMessage = """
-                    📦 Ваши заказы:
-                    
-                    Пока заказов нет.
-                    
-                    Сделайте первый заказ в нашем магазине!
-                    """;
-            } else {
-                ordersMessage = """
-                    📦 Sizning buyurtmalaringiz:
-                    
-                    Hozircha buyurtmalar yo'q.
-                    
-                    Birinchi buyurtmangizni berish uchun do'konni oching!
-                    """;
-            }
+            String ordersMessage = getLocalizedMessage(user.getLanguage(),
+                """
+                📦 Sizning buyurtmalaringiz:
+                
+                Hozircha buyurtmalar yo'q.
+                
+                Birinchi buyurtmangizni berish uchun do'konni oching!
+                """,
+                """
+                📦 Сизнинг буюртмаларингиз:
+                
+                Ҳозирча буюртмалар йўқ.
+                
+                Биринчи буюртмангизни бериш учун дўконни очинг!
+                """,
+                """
+                📦 Ваши заказы:
+                
+                Пока заказов нет.
+                
+                Сделайте первый заказ в нашем магазине!
+                """
+            );
             sendMessage(chatId, ordersMessage);
             return;
         }
         
         StringBuilder message = new StringBuilder();
-        if ("ru".equals(user.getLanguage())) {
-            message.append("📦 Ваши заказы:\n\n");
-        } else {
-            message.append("📦 Sizning buyurtmalaringiz:\n\n");
-        }
+        String headerMessage = getLocalizedMessage(user.getLanguage(),
+            "📦 Sizning buyurtmalaringiz:\n\n",
+            "📦 Сизнинг буюртмаларингиз:\n\n",
+            "📦 Ваши заказы:\n\n");
+        message.append(headerMessage);
         
         for (int i = 0; i < userOrders.size(); i++) {
             Order order = userOrders.get(i);
             String statusEmoji = getOrderStatusEmoji(order.getStatus());
             String statusText = getOrderStatusText(order.getStatus(), user.getLanguage());
             
-            String amountLabel = "ru".equals(user.getLanguage()) ? "Сумма" : "Summa";
-            String dateLabel = "ru".equals(user.getLanguage()) ? "Дата" : "Sana";
-            String currency = "ru".equals(user.getLanguage()) ? "сум" : "so'm";
+            String amountLabel = getLocalizedMessage(user.getLanguage(), "Summa", "Сумма", "Сумма");
+            String dateLabel = getLocalizedMessage(user.getLanguage(), "Sana", "Сана", "Дата");
+            String currency = getLocalizedMessage(user.getLanguage(), "so'm", "сўм", "сум");
             
             message.append(String.format(
                 "%d. 🧾 *%s*\n" +
@@ -881,40 +1019,31 @@ public class KuponBot extends TelegramLongPollingBot {
     }
     
     private String getOrderStatusText(Order.OrderStatus status, String language) {
-        if ("ru".equals(language)) {
-            return switch (status) {
-                case PENDING -> "Ожидает";
-                case CONFIRMED -> "Подтвержден";
-                case PREPARING -> "Готовится";
-                case SHIPPED -> "Доставляется";
-                case DELIVERED -> "Доставлен";
-                case CANCELLED -> "Отменен";
-            };
-        } else {
-            return switch (status) {
-                case PENDING -> "Kutilmoqda";
-                case CONFIRMED -> "Tasdiqlandi";
-                case PREPARING -> "Tayyorlanmoqda";
-                case SHIPPED -> "Yetkazilmoqda";
-                case DELIVERED -> "Yetkazildi";
-                case CANCELLED -> "Bekor qilindi";
-            };
-        }
+        return switch (status) {
+            case PENDING -> getLocalizedMessage(language, "Kutilmoqda", "Кутилмоқда", "Ожидает");
+            case CONFIRMED -> getLocalizedMessage(language, "Tasdiqlandi", "Тасдиқланди", "Подтвержден");
+            case PREPARING -> getLocalizedMessage(language, "Tayyorlanmoqda", "Тайёрланмоқда", "Готовится");
+            case SHIPPED -> getLocalizedMessage(language, "Yetkazilmoqda", "Етказилмоқда", "Доставляется");
+            case DELIVERED -> getLocalizedMessage(language, "Yetkazildi", "Етказилди", "Доставлен");
+            case CANCELLED -> getLocalizedMessage(language, "Bekor qilindi", "Бекор қилинди", "Отменен");
+        };
     }
     
     private void sendRegisteredUserWelcome(User user, Long chatId) {
-        String welcomeMessage;
-        if ("ru".equals(user.getLanguage())) {
-            welcomeMessage = String.format(
-                "👋 Привет, %s!\n\nВы уже зарегистрированы. Выберите нужный раздел из меню.",
-                user.getFirstName()
-            );
-        } else {
-            welcomeMessage = String.format(
+        String welcomeMessage = getLocalizedMessage(user.getLanguage(),
+            String.format(
                 "👋 Salom, %s!\n\nSiz allaqachon ro'yxatdan o'tgansiz. Menyudan kerakli bo'limni tanlang.",
                 user.getFirstName()
-            );
-        }
+            ),
+            String.format(
+                "👋 Салом, %s!\n\nСиз аллақачон рўйхатдан ўтгансиз. Менюдан керакли бўлимни танланг.",
+                user.getFirstName()
+            ),
+            String.format(
+                "👋 Привет, %s!\n\nВы уже зарегистрированы. Выберите нужный раздел из меню.",
+                user.getFirstName()
+            )
+        );
         
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
@@ -937,33 +1066,40 @@ public class KuponBot extends TelegramLongPollingBot {
         }
         
         if (!isAdmin) {
-            String errorMessage = "ru".equals(user.getLanguage()) ? 
-                "❌ У вас нет прав администратора." :
-                "❌ Sizda admin huquqlari yo'q.";
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Sizda admin huquqlari yo'q.",
+                "❌ Сизда админ ҳуқуқлари йўқ.",
+                "❌ У вас нет прав администратора.");
             sendMessage(chatId, errorMessage);
             return;
         }
         
-        String adminMessage;
-        if ("ru".equals(user.getLanguage())) {
-            adminMessage = "🔐 Панель администратора\n\n" +
-                "Для входа в админ панель:\n" +
-                "1. В браузере: http://localhost:8080/login.html\n" +
-                "2. Код администратора: ADMIN2024\n\n" +
-                "📊 Быстрая статистика:\n" +
-                "👥 Всего пользователей: " + userService.getTotalUsersCount() + "\n" +
-                "🎫 Всего купонов: " + couponService.getTotalCouponsCount() + "\n\n" +
-                "Администраторы: @IbodullaR, @developeradmin23";
-        } else {
-            adminMessage = "🔐 Admin Panel\n\n" +
-                "Admin panelga kirish uchun:\n" +
-                "1. Brauzerda: http://localhost:8080/login.html\n" +
-                "2. Admin kodi: ADMIN2024\n\n" +
-                "📊 Tezkor statistika:\n" +
-                "👥 Jami foydalanuvchilar: " + userService.getTotalUsersCount() + "\n" +
-                "🎫 Jami kuponlar: " + couponService.getTotalCouponsCount() + "\n\n" +
-                "Adminlar: @IbodullaR, @developeradmin23";
-        }
+        String adminMessage = getLocalizedMessage(user.getLanguage(),
+            "🔐 Admin Panel\n\n" +
+            "Admin panelga kirish uchun:\n" +
+            "1. Brauzerda: http://localhost:8080/login.html\n" +
+            "2. Admin kodi: ADMIN2024\n\n" +
+            "📊 Tezkor statistika:\n" +
+            "👥 Jami foydalanuvchilar: " + userService.getTotalUsersCount() + "\n" +
+            "🎫 Jami kuponlar: " + couponService.getTotalCouponsCount() + "\n\n" +
+            "Adminlar: @IbodullaR, @developeradmin23",
+            "🔐 Админ Панел\n\n" +
+            "Админ панелга кириш учун:\n" +
+            "1. Браузерда: http://localhost:8080/login.html\n" +
+            "2. Админ коди: ADMIN2024\n\n" +
+            "📊 Тезкор статистика:\n" +
+            "� Жами eфойдаланувчилар: " + userService.getTotalUsersCount() + "\n" +
+            "🎫 Жами купонлар: " + couponService.getTotalCouponsCount() + "\n\n" +
+            "Админлар: @IbodullaR, @developeradmin23",
+            "🔐 Панель администратора\n\n" +
+            "Для входа в админ панель:\n" +
+            "1. В браузере: http://localhost:8080/login.html\n" +
+            "2. Код администратора: ADMIN2024\n\n" +
+            "📊 Быстрая статистика:\n" +
+            "👥 Всего пользователей: " + userService.getTotalUsersCount() + "\n" +
+            "🎫 Всего купонов: " + couponService.getTotalCouponsCount() + "\n\n" +
+            "Администраторы: @IbodullaR, @developeradmin23"
+        );
         
         sendMessage(chatId, adminMessage);
     }
@@ -981,18 +1117,20 @@ public class KuponBot extends TelegramLongPollingBot {
         }
         
         if (!isAdmin) {
-            String errorMessage = "ru".equals(user.getLanguage()) ? 
-                "❌ У вас нет прав администратора." :
-                "❌ Sizda admin huquqlari yo'q.";
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Sizda admin huquqlari yo'q.",
+                "❌ Сизда админ ҳуқуқлари йўқ.",
+                "❌ У вас нет прав администратора.");
             sendMessage(chatId, errorMessage);
             return;
         }
         
         // Test notification yuborish
         notificationService.testNotifications();
-        String successMessage = "ru".equals(user.getLanguage()) ? 
-            "✅ Тестовое сообщение отправлено!" :
-            "✅ Test xabar yuborildi!";
+        String successMessage = getLocalizedMessage(user.getLanguage(),
+            "✅ Test xabar yuborildi!",
+            "✅ Тест хабар юборилди!",
+            "✅ Тестовое сообщение отправлено!");
         sendMessage(chatId, successMessage);
     }
     
@@ -1009,18 +1147,20 @@ public class KuponBot extends TelegramLongPollingBot {
         }
         
         if (!isAdmin) {
-            String errorMessage = "ru".equals(user.getLanguage()) ? 
-                "❌ У вас нет прав администратора." :
-                "❌ Sizda admin huquqlari yo'q.";
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Sizda admin huquqlari yo'q.",
+                "❌ Сизда админ ҳуқуқлари йўқ.",
+                "❌ У вас нет прав администратора.");
             sendMessage(chatId, errorMessage);
             return;
         }
         
         // 6 oylik yubiley test
         notificationService.testSixMonthAnniversary();
-        String successMessage = "ru".equals(user.getLanguage()) ? 
-            "✅ Тест 6-месячного юбилея выполнен!" :
-            "✅ 6 oylik yubiley test bajarildi!";
+        String successMessage = getLocalizedMessage(user.getLanguage(),
+            "✅ 6 oylik yubiley test bajarildi!",
+            "✅ 6 ойлик юбилей тест бажарилди!",
+            "✅ Тест 6-месячного юбилея выполнен!");
         sendMessage(chatId, successMessage);
     }
     
@@ -1037,18 +1177,20 @@ public class KuponBot extends TelegramLongPollingBot {
         }
         
         if (!isAdmin) {
-            String errorMessage = "ru".equals(user.getLanguage()) ? 
-                "❌ У вас нет прав администратора." :
-                "❌ Sizda admin huquqlari yo'q.";
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Sizda admin huquqlari yo'q.",
+                "❌ Сизда админ ҳуқуқлари йўқ.",
+                "❌ У вас нет прав администратора.");
             sendMessage(chatId, errorMessage);
             return;
         }
         
         // Tug'ilgan kun test
         notificationService.testBirthdays();
-        String successMessage = "ru".equals(user.getLanguage()) ? 
-            "✅ Тест дня рождения выполнен!" :
-            "✅ Tug'ilgan kun test bajarildi!";
+        String successMessage = getLocalizedMessage(user.getLanguage(),
+            "✅ Tug'ilgan kun test bajarildi!",
+            "✅ Туғилган кун тест бажарилди!",
+            "✅ Тест дня рождения выполнен!");
         sendMessage(chatId, successMessage);
     }
     
@@ -1065,18 +1207,20 @@ public class KuponBot extends TelegramLongPollingBot {
         }
         
         if (!isAdmin) {
-            String errorMessage = "ru".equals(user.getLanguage()) ? 
-                "❌ У вас нет прав администратора." :
-                "❌ Sizda admin huquqlari yo'q.";
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Sizda admin huquqlari yo'q.",
+                "❌ Сизда админ ҳуқуқлари йўқ.",
+                "❌ У вас нет прав администратора.");
             sendMessage(chatId, errorMessage);
             return;
         }
         
         // 3 daqiqa test
         notificationService.testThreeMinuteRegistrations();
-        String successMessage = "ru".equals(user.getLanguage()) ? 
-            "✅ 3-минутный тест выполнен!" :
-            "✅ 3 daqiqa test bajarildi!";
+        String successMessage = getLocalizedMessage(user.getLanguage(),
+            "✅ 3 daqiqa test bajarildi!",
+            "✅ 3 дақиқа тест бажарилди!",
+            "✅ 3-минутный тест выполнен!");
         sendMessage(chatId, successMessage);
     }
     
@@ -1093,7 +1237,11 @@ public class KuponBot extends TelegramLongPollingBot {
         }
         
         if (!isAdmin) {
-            sendMessage(chatId, "❌ Sizda admin huquqlari yo'q.");
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Sizda admin huquqlari yo'q.",
+                "❌ Сизда админ ҳуқуқлари йўқ.",
+                "❌ У вас нет прав администратора.");
+            sendMessage(chatId, errorMessage);
             return;
         }
         
@@ -1101,28 +1249,35 @@ public class KuponBot extends TelegramLongPollingBot {
         String[] parts = text.split(" ", 2);
         
         if (parts.length < 2) {
-            String helpMessage;
-            if ("ru".equals(user.getLanguage())) {
-                helpMessage = """
-                    📢 Отправка рассылки:
-                    
-                    Использование: /broadcast [текст сообщения]
-                    
-                    Пример: /broadcast Привет! Новые товары поступили!
-                    
-                    ⚠️ Это сообщение будет отправлено всем зарегистрированным пользователям.
-                    """;
-            } else {
-                helpMessage = """
-                    📢 Broadcast xabar yuborish:
-                    
-                    Foydalanish: /broadcast [xabar matni]
-                    
-                    Misol: /broadcast Assalomu alaykum! Yangi mahsulotlar keldi!
-                    
-                    ⚠️ Bu xabar barcha ro'yxatdan o'tgan foydalanuvchilarga yuboriladi.
-                    """;
-            }
+            String helpMessage = getLocalizedMessage(user.getLanguage(),
+                """
+                📢 Broadcast xabar yuborish:
+                
+                Foydalanish: /broadcast [xabar matni]
+                
+                Misol: /broadcast Assalomu alaykum! Yangi mahsulotlar keldi!
+                
+                ⚠️ Bu xabar barcha ro'yxatdan o'tgan foydalanuvchilarga yuboriladi.
+                """,
+                """
+                📢 Broadcast хабар юбориш:
+                
+                Фойдаланиш: /broadcast [хабар матни]
+                
+                Мисол: /broadcast Ассалому алайкум! Янги маҳсулотлар келди!
+                
+                ⚠️ Бу хабар барча рўйхатдан ўтган фойдаланувчиларга юборилади.
+                """,
+                """
+                📢 Отправка рассылки:
+                
+                Использование: /broadcast [текст сообщения]
+                
+                Пример: /broadcast Привет! Новые товары поступили!
+                
+                ⚠️ Это сообщение будет отправлено всем зарегистрированным пользователям.
+                """
+            );
             sendMessage(chatId, helpMessage);
             return;
         }
@@ -1130,16 +1285,18 @@ public class KuponBot extends TelegramLongPollingBot {
         String broadcastMessage = parts[1].trim();
         
         if (broadcastMessage.isEmpty()) {
-            String errorMessage = "ru".equals(user.getLanguage()) ? 
-                "❌ Текст сообщения не может быть пустым." :
-                "❌ Xabar matni bo'sh bo'lishi mumkin emas.";
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Xabar matni bo'sh bo'lishi mumkin emas.",
+                "❌ Хабар матни бўш бўлиши мумкин эмас.",
+                "❌ Текст сообщения не может быть пустым.");
             sendMessage(chatId, errorMessage);
             return;
         }
         
-        String sendingMessage = "ru".equals(user.getLanguage()) ? 
-            "📤 Сообщение отправляется всем пользователям..." :
-            "📤 Xabar barcha foydalanuvchilarga yuborilmoqda...";
+        String sendingMessage = getLocalizedMessage(user.getLanguage(),
+            "📤 Xabar barcha foydalanuvchilarga yuborilmoqda...",
+            "📤 Хабар барча фойдаланувчиларга юборилмоқда...",
+            "� Сообщение отправляется всем пользователям...");
         sendMessage(chatId, sendingMessage);
         
         // Async ravishda yuborish
@@ -1147,9 +1304,38 @@ public class KuponBot extends TelegramLongPollingBot {
             try {
                 BroadcastService.BroadcastResult result = broadcastService.sendBroadcastMessage(broadcastMessage);
                 
-                String resultMessage;
-                if ("ru".equals(user.getLanguage())) {
-                    resultMessage = String.format(
+                String resultMessage = getLocalizedMessage(user.getLanguage(),
+                    String.format(
+                        """
+                        ✅ Broadcast xabar yuborildi!
+                        
+                        📊 Natijalar:
+                        👥 Jami foydalanuvchilar: %d
+                        ✅ Muvaffaqiyatli: %d
+                        ❌ Xatolik: %d
+                        � Muvaffaqiyat darajasi: %.1f%%
+                        """,
+                        result.getTotalUsers(),
+                        result.getSuccessCount(),
+                        result.getFailureCount(),
+                        result.getSuccessRate()
+                    ),
+                    String.format(
+                        """
+                        ✅ Broadcast хабар юборилди!
+                        
+                        📊 Натижалар:
+                        👥 Жами фойдаланувчилар: %d
+                        ✅ Муваффақиятли: %d
+                        ❌ Хатолик: %d
+                        📈 Муваффақият даражаси: %.1f%%
+                        """,
+                        result.getTotalUsers(),
+                        result.getSuccessCount(),
+                        result.getFailureCount(),
+                        result.getSuccessRate()
+                    ),
+                    String.format(
                         """
                         ✅ Рассылка отправлена!
                         
@@ -1163,32 +1349,17 @@ public class KuponBot extends TelegramLongPollingBot {
                         result.getSuccessCount(),
                         result.getFailureCount(),
                         result.getSuccessRate()
-                    );
-                } else {
-                    resultMessage = String.format(
-                        """
-                        ✅ Broadcast xabar yuborildi!
-                        
-                        📊 Natijalar:
-                        👥 Jami foydalanuvchilar: %d
-                        ✅ Muvaffaqiyatli: %d
-                        ❌ Xatolik: %d
-                        📈 Muvaffaqiyat darajasi: %.1f%%
-                        """,
-                        result.getTotalUsers(),
-                        result.getSuccessCount(),
-                        result.getFailureCount(),
-                        result.getSuccessRate()
-                    );
-                }
+                    )
+                );
                 
                 sendMessage(chatId, resultMessage);
                 
             } catch (Exception e) {
                 log.error("Error in broadcast command: ", e);
-                String errorMessage = "ru".equals(user.getLanguage()) ? 
-                    "❌ Ошибка при отправке сообщения: " + e.getMessage() :
-                    "❌ Xabar yuborishda xatolik yuz berdi: " + e.getMessage();
+                String errorMessage = getLocalizedMessage(user.getLanguage(),
+                    "❌ Xabar yuborishda xatolik yuz berdi: " + e.getMessage(),
+                    "❌ Хабар юборишда хатолик юз берди: " + e.getMessage(),
+                    "❌ Ошибка при отправке сообщения: " + e.getMessage());
                 sendMessage(chatId, errorMessage);
             }
         });

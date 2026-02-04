@@ -76,7 +76,7 @@ public class User {
     private String birthDate; // Format: DD.MM.YYYY
     
     @Column(name = "language", nullable = true)
-    private String language; // Til faqat handleLanguageState da belgilanadi
+    private String language = "uz"; // "uz" (lotin), "ru" (rus), "uz_cyrl" (kiril)
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
