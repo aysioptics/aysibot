@@ -142,7 +142,7 @@ public class KuponBot extends TelegramLongPollingBot {
     }
     
     private void sendWelcomeMessage(Long chatId) {
-        String welcomeText = "🎉 Kupon botiga xush kelibsiz!\n\n" +
+        String welcomeText = "🎉 AYSI OPTICS botiga xush kelibsiz!\n\n" +
                 "Iltimos, tilni tanlang / Пожалуйста, выберите язык / Илтимос, тилни танланг:";
         
         SendMessage sendMessage = new SendMessage();
@@ -542,7 +542,7 @@ public class KuponBot extends TelegramLongPollingBot {
                 
                 String successMessage = getLocalizedMessage(user.getLanguage(),
                     String.format(
-                        "🎉 Tabriklaymiz! Ro'yxatdan o'tish muvaffaqiyatli yakunlandi!\n\n" +
+                        "🎉 Tabriklaymiz! AYSI OPTICS ga ro'yxatdan o'tish muvaffaqiyatli yakunlandi!\n\n" +
                         "� Ism: %s\n" +
                         "👤 Familiya: %s\n" +
                         "📱 Telefon: %s\n" +
@@ -556,7 +556,7 @@ public class KuponBot extends TelegramLongPollingBot {
                         coupon.getCode()
                     ),
                     String.format(
-                        "🎉 Табриклаймиз! Рўйхатдан ўтиш муваффақиятли якунланди!\n\n" +
+                        "🎉 Табриклаймиз! AYSI OPTICS га рўйхатдан ўтиш муваффақиятли якунланди!\n\n" +
                         "👤 Исм: %s\n" +
                         "👤 Фамилия: %s\n" +
                         "📱 Телефон: %s\n" +
@@ -570,7 +570,7 @@ public class KuponBot extends TelegramLongPollingBot {
                         coupon.getCode()
                     ),
                     String.format(
-                        "🎉 Поздравляем! Регистрация успешно завершена!\n\n" +
+                        "🎉 Поздравляем! Регистрация в AYSI OPTICS успешно завершена!\n\n" +
                         "👤 Имя: %s\n" +
                         "👤 Фамилия: %s\n" +
                         "📱 Телефон: %s\n" +
@@ -858,7 +858,7 @@ public class KuponBot extends TelegramLongPollingBot {
             """
             ℹ️ Yordam:
             
-            🛒 Do'kon - ko'zoynaklar katalogini ko'rish va xarid qilish
+            🛒 Do'kon - AYSI OPTICS ko'zoynaklar katalogini ko'rish va xarid qilish
             📦 Buyurtmalarim - buyurtmalar tarixi
             👤 Profil - shaxsiy ma'lumotlaringizni ko'rish
             ℹ️ Yordam - bu yordam xabari
@@ -868,7 +868,7 @@ public class KuponBot extends TelegramLongPollingBot {
             """
             ℹ️ Ёрдам:
             
-            🛒 Дўкон - кўзойнаклар каталогини кўриш ва харид қилиш
+            🛒 Дўкон - AYSI OPTICS кўзойнаклар каталогини кўриш ва харид қилиш
             📦 Буюртмаларим - буюртмалар тарихи
             👤 Профил - шахсий маълумотларингизни кўриш
             ℹ️ Ёрдам - бу ёрдам хабари
@@ -878,7 +878,7 @@ public class KuponBot extends TelegramLongPollingBot {
             """
             ℹ️ Помощь:
             
-            🛒 Магазин - просмотр каталога очков и покупки
+            🛒 Магазин - просмотр каталога очков AYSI OPTICS и покупки
             📦 Мои заказы - история заказов
             👤 Профиль - просмотр личной информации
             ℹ️ Помощь - это сообщение помощи
@@ -897,33 +897,33 @@ public class KuponBot extends TelegramLongPollingBot {
         switch (language) {
             case "uz_cyrl" -> {
                 shopMessage = """
-                    🛒 Кўзойнак Дўкони
+                    🛒 AYSI OPTICS Дўкони
                     
                     Бизнинг дўконимизда энг сифатли кўзойнаклар мавжуд!
                     
                     Дўконни очиш учун қуйидаги тугмани босинг:
                     """;
-                buttonText = "🛒 Дўконни очиш";
+                buttonText = "🛒 AYSI OPTICS ни очиш";
             }
             case "ru" -> {
                 shopMessage = """
-                    🛒 Магазин очков
+                    🛒 Магазин AYSI OPTICS
                     
                     В нашем магазине представлены самые качественные очки!
                     
                     Нажмите кнопку ниже, чтобы открыть магазин:
                     """;
-                buttonText = "🛒 Открыть магазин";
+                buttonText = "🛒 Открыть AYSI OPTICS";
             }
             default -> {
                 shopMessage = """
-                    🛒 Ko'zoynak Do'koni
+                    🛒 AYSI OPTICS Do'koni
                     
                     Bizning do'konimizda eng sifatli ko'zoynaklar mavjud!
                     
                     Do'konni ochish uchun quyidagi tugmani bosing:
                     """;
-                buttonText = "🛒 Do'konni ochish";
+                buttonText = "🛒 AYSI OPTICS ni ochish";
             }
         }
         
@@ -963,21 +963,21 @@ public class KuponBot extends TelegramLongPollingBot {
                 
                 Hozircha buyurtmalar yo'q.
                 
-                Birinchi buyurtmangizni berish uchun do'konni oching!
+                Birinchi buyurtmangizni berish uchun AYSI OPTICS do'konini oching!
                 """,
                 """
                 📦 Сизнинг буюртмаларингиз:
                 
                 Ҳозирча буюртмалар йўқ.
                 
-                Биринчи буюртмангизни бериш учун дўконни очинг!
+                Биринчи буюртмангизни бериш учун AYSI OPTICS дўконини очинг!
                 """,
                 """
                 📦 Ваши заказы:
                 
                 Пока заказов нет.
                 
-                Сделайте первый заказ в нашем магазине!
+                Сделайте первый заказ в магазине AYSI OPTICS!
                 """
             );
             sendMessage(chatId, ordersMessage);
