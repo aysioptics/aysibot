@@ -448,20 +448,6 @@
                 </table>
             </div>
         </div>
-        
-        <div class="section">
-            <h2 class="section-title">🔔 Bildirishnomalar</h2>
-            <div style="margin-bottom: 20px;">
-                <button class="btn" onclick="testNotifications()" style="background: #17a2b8;">📧 Test xabar yuborish</button>
-                <button class="btn" onclick="testAnniversary()" style="background: #28a745; margin-left: 10px;">🎉 6 oylik yubiley test</button>
-                <button class="btn" onclick="testBirthdays()" style="background: #ffc107; margin-left: 10px;">🎂 Tug'ilgan kun test</button>
-                <button class="btn" onclick="testThreeMinute()" style="background: #dc3545; margin-left: 10px;">⏰ 3 daqiqa test</button>
-                <button class="btn" onclick="testVoucherReminders()" style="background: #6f42c1; margin-left: 10px;">🎟️ Voucher reminder test</button>
-                <p style="margin-top: 10px; color: #666; font-size: 14px;">
-                    Bu tugmalar admin'ga test xabarlar yuboradi. Avtomatik xabarlar har kuni soat 09:00 (6 oylik yubiley) va 10:00 (tug'ilgan kunlar) da yuboriladi. 3 daqiqa test har daqiqada tekshiriladi.
-                </p>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -853,96 +839,6 @@
             
             displayUsers(searchResults);
         });
-        
-        // Test notifications function
-        async function testNotifications() {
-            try {
-                const response = await apiCall(`${API_BASE}/test-notifications`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    alert('✅ Test xabar muvaffaqiyatli yuborildi!');
-                } else {
-                    alert('❌ Xatolik yuz berdi: ' + response.statusText);
-                }
-            } catch (error) {
-                console.error('Error testing notifications:', error);
-                alert('❌ Xatolik yuz berdi: ' + error.message);
-            }
-        }
-        
-        // Test anniversary function
-        async function testAnniversary() {
-            try {
-                const response = await apiCall(`${API_BASE}/test-anniversary`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    alert('✅ 6 oylik yubiley test muvaffaqiyatli bajarildi!');
-                } else {
-                    alert('❌ Xatolik yuz berdi: ' + response.statusText);
-                }
-            } catch (error) {
-                console.error('Error testing anniversary:', error);
-                alert('❌ Xatolik yuz berdi: ' + error.message);
-            }
-        }
-        
-        // Test birthdays function
-        async function testBirthdays() {
-            try {
-                const response = await apiCall(`${API_BASE}/test-birthdays`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    alert('✅ Tug\'ilgan kun test muvaffaqiyatli bajarildi!');
-                } else {
-                    alert('❌ Xatolik yuz berdi: ' + response.statusText);
-                }
-            } catch (error) {
-                console.error('Error testing birthdays:', error);
-                alert('❌ Xatolik yuz berdi: ' + error.message);
-            }
-        }
-        
-        // Test 3-minute registration function
-        async function testThreeMinute() {
-            try {
-                const response = await apiCall(`${API_BASE}/test-3minute`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    alert('✅ 3 daqiqa test muvaffaqiyatli bajarildi!');
-                } else {
-                    alert('❌ Xatolik yuz berdi: ' + response.statusText);
-                }
-            } catch (error) {
-                console.error('Error testing 3-minute:', error);
-                alert('❌ Xatolik yuz berdi: ' + error.message);
-            }
-        }
-        
-        // Test voucher reminders function
-        async function testVoucherReminders() {
-            try {
-                const response = await apiCall(`${API_BASE}/test-voucher-reminders`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    alert('✅ Voucher reminder test muvaffaqiyatli bajarildi!');
-                } else {
-                    alert('❌ Xatolik yuz berdi: ' + response.statusText);
-                }
-            } catch (error) {
-                console.error('Error testing voucher reminders:', error);
-                alert('❌ Xatolik yuz berdi: ' + error.message);
-            }
-        }
         
         // Send broadcast message
         async function sendBroadcast() {
