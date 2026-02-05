@@ -366,6 +366,30 @@
         </div>
         
         <div class="section">
+            <h2 class="section-title">👤 Bitta foydalanuvchiga xabar</h2>
+            <div style="margin-bottom: 20px;">
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin-bottom: 15px;">
+                    <input type="number" id="singleUserId" placeholder="Telegram ID (masalan: 123456789)" 
+                        style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                    <textarea id="singleUserMessage" placeholder="Foydalanuvchiga yuboriladigan xabar..." 
+                        style="height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; resize: vertical;"></textarea>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button class="btn" onclick="sendSingleMessage()" style="background: #007bff;">👤 Xabar yuborish</button>
+                    <button class="btn" onclick="findUserById()" style="background: #28a745; margin-left: 10px;">🔍 Foydalanuvchini topish</button>
+                    <span id="singleMessageStatus" style="margin-left: 15px; font-weight: bold;"></span>
+                </div>
+                <div id="foundUserInfo" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; display: none;">
+                    <h4>Topilgan foydalanuvchi:</h4>
+                    <div id="userDetails"></div>
+                </div>
+                <p style="margin-top: 10px; color: #666; font-size: 14px;">
+                    💡 Foydalanuvchining Telegram ID sini kiritib, unga shaxsiy xabar yuboring. Avval "Foydalanuvchini topish" tugmasini bosib, to'g'ri foydalanuvchi ekanligini tekshiring.
+                </p>
+            </div>
+        </div>
+        
+        <div class="section">
             <h2 class="section-title">🔔 Bildirishnomalar</h2>
             <div style="margin-bottom: 20px;">
                 <button class="btn" onclick="testNotifications()" style="background: #17a2b8;">📧 Test xabar yuborish</button>
@@ -883,6 +907,118 @@
                 }
             } catch (error) {
                 console.error('Error sending broadcast:', error);
+                statusElement.textContent = '❌ Xatolik yuz berdi';
+                statusElement.style.color = '#dc3545';
+                alert('❌ Xatolik yuz berdi: ' + error.message);
+            }
+        }
+        
+        // Find user by Telegram ID
+        async function findUserById() {
+            const telegramId = document.getElementById('singleUserId').value.trim();
+            const statusElement = document.getElementById('singleMessageStatus');
+            const userInfoDiv = document.getElementById('foundUserInfo');
+            const userDetailsDiv = document.getElementById('userDetails');
+            
+            if (!telegramId) {
+                alert('❌ Iltimos, Telegram ID ni kiriting!');
+                return;
+            }
+            
+            try {
+                statusElement.textContent = '🔍 Qidirilmoqda...';
+                statusElement.style.color = '#007bff';
+                userInfoDiv.style.display = 'none';
+                
+                const response = await apiCall(`${API_BASE}/find-user/${telegramId}`);
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    statusElement.textContent = '✅ Foydalanuvchi topildi!';
+                    statusElement.style.color = '#28a745';
+                    
+                    // Display user info
+                    userDetailsDiv.innerHTML = `
+                        <p><strong>ID:</strong> ${user.telegramId}</p>
+                        <p><strong>Ism:</strong> ${user.firstName || '-'}</p>
+                        <p><strong>Familiya:</strong> ${user.lastName || '-'}</p>
+                        <p><strong>Username:</strong> ${user.telegramUsername || 'Username yo\'q'}</p>
+                        <p><strong>Telefon:</strong> ${user.phoneNumber || '-'}</p>
+                        <p><strong>Tug\'ilgan kun:</strong> ${user.birthDate || 'Kiritilmagan'}</p>
+                        <p><strong>Holat:</strong> ${user.state}</p>
+                        <p><strong>Ro\'yxatdan o\'tgan:</strong> ${new Date(user.createdAt).toLocaleDateString('uz-UZ')}</p>
+                    `;
+                    userInfoDiv.style.display = 'block';
+                    
+                } else if (response.status === 404) {
+                    statusElement.textContent = '❌ Foydalanuvchi topilmadi';
+                    statusElement.style.color = '#dc3545';
+                    userInfoDiv.style.display = 'none';
+                } else {
+                    statusElement.textContent = '❌ Xatolik yuz berdi';
+                    statusElement.style.color = '#dc3545';
+                    userInfoDiv.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error finding user:', error);
+                statusElement.textContent = '❌ Xatolik yuz berdi';
+                statusElement.style.color = '#dc3545';
+                userInfoDiv.style.display = 'none';
+            }
+        }
+        
+        // Send message to single user
+        async function sendSingleMessage() {
+            const telegramId = document.getElementById('singleUserId').value.trim();
+            const message = document.getElementById('singleUserMessage').value.trim();
+            const statusElement = document.getElementById('singleMessageStatus');
+            
+            if (!telegramId) {
+                alert('❌ Iltimos, Telegram ID ni kiriting!');
+                return;
+            }
+            
+            if (!message) {
+                alert('❌ Iltimos, xabar matnini kiriting!');
+                return;
+            }
+            
+            if (!confirm(`Haqiqatan ham ${telegramId} ID li foydalanuvchiga xabar yuborishni xohlaysizmi?`)) {
+                return;
+            }
+            
+            try {
+                statusElement.textContent = '📤 Yuborilmoqda...';
+                statusElement.style.color = '#007bff';
+                
+                const response = await apiCall(`${API_BASE}/send-single-message`, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        telegramId: telegramId,
+                        message: message 
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    statusElement.textContent = '✅ Xabar muvaffaqiyatli yuborildi!';
+                    statusElement.style.color = '#28a745';
+                    
+                    // Clear message after successful send
+                    document.getElementById('singleUserMessage').value = '';
+                    
+                    alert('✅ Xabar muvaffaqiyatli yuborildi!');
+                } else if (response.status === 404) {
+                    statusElement.textContent = '❌ Foydalanuvchi topilmadi';
+                    statusElement.style.color = '#dc3545';
+                    alert('❌ Foydalanuvchi topilmadi yoki ro\'yxatdan o\'tmagan');
+                } else {
+                    statusElement.textContent = '❌ Xatolik yuz berdi';
+                    statusElement.style.color = '#dc3545';
+                    alert('❌ Xatolik yuz berdi: ' + response.statusText);
+                }
+            } catch (error) {
+                console.error('Error sending single message:', error);
                 statusElement.textContent = '❌ Xatolik yuz berdi';
                 statusElement.style.color = '#dc3545';
                 alert('❌ Xatolik yuz berdi: ' + error.message);

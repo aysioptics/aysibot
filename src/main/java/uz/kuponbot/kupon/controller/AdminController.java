@@ -2,6 +2,7 @@ package uz.kuponbot.kupon.controller;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpHeaders;
@@ -264,6 +265,48 @@ public class AdminController {
         }
     }
     
+    @GetMapping("/find-user/{telegramId}")
+    public ResponseEntity<UserDto> findUserByTelegramId(@PathVariable Long telegramId) {
+        try {
+            Optional<User> userOptional = userService.findByTelegramId(telegramId);
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            UserDto userDto = convertToUserDto(userOptional.get());
+            return ResponseEntity.ok(userDto);
+            
+        } catch (Exception e) {
+            log.error("Error finding user by telegram ID {}: ", telegramId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    @PostMapping("/send-single-message")
+    public ResponseEntity<SingleMessageResponse> sendSingleMessage(@RequestBody SingleMessageRequest request) {
+        try {
+            if (request.getTelegramId() == null || request.getMessage() == null || request.getMessage().trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            Optional<User> userOptional = userService.findByTelegramId(request.getTelegramId());
+            if (userOptional.isEmpty() || userOptional.get().getState() != User.UserState.REGISTERED) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            boolean success = broadcastService.sendSingleMessage(request.getTelegramId(), request.getMessage());
+            
+            SingleMessageResponse response = new SingleMessageResponse(success, 
+                success ? "Xabar muvaffaqiyatli yuborildi" : "Xabar yuborishda xatolik");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error sending single message to {}: ", request.getTelegramId(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
     private UserDto convertToUserDto(User user) {
         List<Coupon> userCoupons = couponService.getUserCoupons(user);
         long activeCoupons = userCoupons.stream()
@@ -362,6 +405,23 @@ public class AdminController {
             this.successCount = successCount;
             this.failureCount = failureCount;
             this.successRate = successRate;
+        }
+    }
+    
+    @Data
+    public static class SingleMessageRequest {
+        private Long telegramId;
+        private String message;
+    }
+    
+    @Data
+    public static class SingleMessageResponse {
+        private final boolean success;
+        private final String message;
+        
+        public SingleMessageResponse(boolean success, String message) {
+            this.success = success;
+            this.message = message;
         }
     }
 }

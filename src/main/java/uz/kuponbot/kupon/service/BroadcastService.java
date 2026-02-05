@@ -78,6 +78,29 @@ public class BroadcastService {
         return new BroadcastResult(total, success, failure);
     }
     
+    public boolean sendSingleMessage(Long telegramId, String message) {
+        log.info("Sending single message to user: {}", telegramId);
+        
+        try {
+            TelegramLongPollingBot bot = applicationContext.getBean("kuponBot", TelegramLongPollingBot.class);
+            
+            SendMessage sendMessage = new SendMessage();
+            sendMessage.setChatId(telegramId);
+            sendMessage.setText(message);
+            
+            bot.execute(sendMessage);
+            log.info("Single message sent successfully to user: {}", telegramId);
+            return true;
+            
+        } catch (TelegramApiException e) {
+            log.error("Failed to send single message to user {}: {}", telegramId, e.getMessage());
+            return false;
+        } catch (Exception e) {
+            log.error("Unexpected error sending single message to user {}: ", telegramId, e);
+            return false;
+        }
+    }
+    
     public static class BroadcastResult {
         private final int totalUsers;
         private final int successCount;
