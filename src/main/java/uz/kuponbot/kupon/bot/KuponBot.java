@@ -13,11 +13,15 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -78,6 +82,23 @@ public class KuponBot extends TelegramLongPollingBot {
             } catch (Exception e) {
                 log.error("Error processing message: ", e);
                 // Foydalanuvchining tilini aniqlash
+                Optional<User> userOpt = userService.findByTelegramId(userId);
+                String errorMessage = "Произошла ошибка. Пожалуйста, попробуйте еще раз.";
+                if (userOpt.isPresent() && "uz".equals(userOpt.get().getLanguage())) {
+                    errorMessage = "Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.";
+                }
+                sendMessage(chatId, errorMessage);
+            }
+        } else if (update.hasCallbackQuery()) {
+            CallbackQuery callbackQuery = update.getCallbackQuery();
+            Long chatId = callbackQuery.getMessage().getChatId();
+            Long userId = callbackQuery.getFrom().getId();
+            String callbackData = callbackQuery.getData();
+            
+            try {
+                handleCallbackQuery(callbackQuery, chatId, userId, callbackData);
+            } catch (Exception e) {
+                log.error("Error processing callback query: ", e);
                 Optional<User> userOpt = userService.findByTelegramId(userId);
                 String errorMessage = "Произошла ошибка. Пожалуйста, попробуйте еще раз.";
                 if (userOpt.isPresent() && "uz".equals(userOpt.get().getLanguage())) {
@@ -447,92 +468,99 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void sendChannelSubscriptionMessage(Long chatId, String language) {
         String subscriptionMessage;
-        String buttonText;
+        String subscribeButtonText;
+        String checkButtonText;
         
         switch (language) {
             case "uz_cyrl" -> {
-                subscriptionMessage = String.format(
-                    """
+                subscriptionMessage = """
                     ✅ Туғилган сана қабул қилинди!
                     
                     📢 Рўйхатдан ўтишни якунлаш учун бизнинг каналимизга обуна бўлинг:
                     
-                    👇 Қуйидаги ҳаволани босиб каналга ўтинг ва обуна бўлинг:
-                    %s
-                    
-                    Обуна бўлгандан кейин "✅ Обунани текшириш" тугмасини босинг.
-                    """,
-                    "https://t.me/" + channelUsername.replace("@", "")
-                );
-                buttonText = "✅ Обунани текшириш";
+                    👇 Қуйидаги тугмани босиб каналга ўтинг ва обуна бўлинг, кейин "Обунани текшириш" тугмасини босинг.
+                    """;
+                subscribeButtonText = "📢 Каналга обуна бўлиш";
+                checkButtonText = "✅ Обунани текшириш";
             }
             case "ru" -> {
-                subscriptionMessage = String.format(
-                    """
+                subscriptionMessage = """
                     ✅ Дата рождения принята!
                     
                     📢 Для завершения регистрации подпишитесь на наш канал:
                     
-                    👇 Нажмите на ссылку ниже, перейдите в канал и подпишитесь:
-                    %s
-                    
-                    После подписки нажмите кнопку "✅ Проверить подписку".
-                    """,
-                    "https://t.me/" + channelUsername.replace("@", "")
-                );
-                buttonText = "✅ Проверить подписку";
+                    👇 Нажмите кнопку ниже, перейдите в канал и подпишитесь, затем нажмите "Проверить подписку".
+                    """;
+                subscribeButtonText = "📢 Подписаться на канал";
+                checkButtonText = "✅ Проверить подписку";
             }
             default -> {
-                subscriptionMessage = String.format(
-                    """
+                subscriptionMessage = """
                     ✅ Tug'ilgan sana qabul qilindi!
                     
                     📢 Ro'yxatdan o'tishni yakunlash uchun bizning kanalimizga obuna bo'ling:
                     
-                    👇 Quyidagi havolani bosib kanalga o'ting va obuna bo'ling:
-                    %s
-                    
-                    Obuna bo'lgandan keyin "✅ Obunani tekshirish" tugmasini bosing.
-                    """,
-                    "https://t.me/" + channelUsername.replace("@", "")
-                );
-                buttonText = "✅ Obunani tekshirish";
+                    👇 Quyidagi tugmani bosib kanalga o'ting va obuna bo'ling, keyin "Obunani tekshirish" tugmasini bosing.
+                    """;
+                subscribeButtonText = "📢 Kanalga obuna bo'lish";
+                checkButtonText = "✅ Obunani tekshirish";
             }
         }
         
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
         sendMessage.setText(subscriptionMessage);
-        sendMessage.setReplyMarkup(createChannelSubscriptionKeyboard(buttonText));
+        sendMessage.setReplyMarkup(createChannelSubscriptionInlineKeyboard(subscribeButtonText, checkButtonText));
         
         sendMessage(sendMessage);
     }
     
-    private ReplyKeyboardMarkup createChannelSubscriptionKeyboard(String buttonText) {
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true);
-        keyboardMarkup.setOneTimeKeyboard(false);
+    private InlineKeyboardMarkup createChannelSubscriptionInlineKeyboard(String subscribeButtonText, String checkButtonText) {
+        InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
         
-        List<KeyboardRow> keyboard = new ArrayList<>();
+        // First row - Subscribe button
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        InlineKeyboardButton subscribeButton = new InlineKeyboardButton();
+        subscribeButton.setText(subscribeButtonText);
+        subscribeButton.setUrl("https://t.me/" + channelUsername.replace("@", ""));
+        row1.add(subscribeButton);
         
-        // Obunani tekshirish tugmasi
-        KeyboardRow row = new KeyboardRow();
-        row.add(buttonText);
+        // Second row - Check subscription button
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        InlineKeyboardButton checkButton = new InlineKeyboardButton();
+        checkButton.setText(checkButtonText);
+        checkButton.setCallbackData("check_subscription");
+        row2.add(checkButton);
         
-        keyboard.add(row);
-        keyboardMarkup.setKeyboard(keyboard);
+        keyboard.add(row1);
+        keyboard.add(row2);
+        inlineKeyboard.setKeyboard(keyboard);
         
-        return keyboardMarkup;
+        return inlineKeyboard;
     }
     
-    private void handleChannelSubscriptionState(Message message, User user, Long chatId) {
-        String checkButtonUz = "✅ Obunani tekshirish";
-        String checkButtonUzCyrl = "✅ Обунани текшириш";
-        String checkButtonRu = "✅ Проверить подписку";
+    private void handleCallbackQuery(CallbackQuery callbackQuery, Long chatId, Long userId, String callbackData) {
+        Optional<User> userOpt = userService.findByTelegramId(userId);
         
-        if (message.hasText() && (message.getText().equals(checkButtonUz) || 
-                                  message.getText().equals(checkButtonUzCyrl) || 
-                                  message.getText().equals(checkButtonRu))) {
+        if (userOpt.isEmpty()) {
+            return;
+        }
+        
+        User user = userOpt.get();
+        
+        if ("check_subscription".equals(callbackData) && user.getState() == User.UserState.WAITING_CHANNEL_SUBSCRIPTION) {
+            // Answer the callback query first
+            try {
+                AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery();
+                answerCallbackQuery.setCallbackQueryId(callbackQuery.getId());
+                answerCallbackQuery.setText("Obuna tekshirilmoqda...");
+                answerCallbackQuery.setShowAlert(false);
+                execute(answerCallbackQuery);
+            } catch (TelegramApiException e) {
+                log.error("Error answering callback query: ", e);
+            }
+            
             if (checkChannelSubscription(user.getTelegramId())) {
                 // Obuna tasdiqlandi - kupon yaratish
                 user.setState(User.UserState.REGISTERED);
@@ -543,7 +571,7 @@ public class KuponBot extends TelegramLongPollingBot {
                 String successMessage = getLocalizedMessage(user.getLanguage(),
                     String.format(
                         "🎉 Tabriklaymiz! AYSI OPTICS ga ro'yxatdan o'tish muvaffaqiyatli yakunlandi!\n\n" +
-                        "� Ism: %s\n" +
+                        "👤 Ism: %s\n" +
                         "👤 Familiya: %s\n" +
                         "📱 Telefon: %s\n" +
                         "🎂 Tug'ilgan sana: %s\n\n" +
@@ -595,20 +623,24 @@ public class KuponBot extends TelegramLongPollingBot {
             } else {
                 String errorMessage = getLocalizedMessage(user.getLanguage(),
                     "❌ Siz hali kanalga obuna bo'lmagansiz!\n\n" +
-                    "Iltimos, avval kanalga obuna bo'ling, keyin \"✅ Obunani tekshirish\" tugmasini bosing.",
+                    "Iltimos, avval \"📢 Kanalga obuna bo'lish\" tugmasini bosib kanalga obuna bo'ling, keyin \"✅ Obunani tekshirish\" tugmasini bosing.",
                     "❌ Сиз ҳали каналга обуна бўлмагансиз!\n\n" +
-                    "Илтимос, аввал каналга обуна бўлинг, кейин \"✅ Обунани текшириш\" тугмасини босинг.",
+                    "Илтимос, аввал \"📢 Каналга обуна бўлиш\" тугмасини босиб каналга обуна бўлинг, кейин \"✅ Обунани текшириш\" тугмасини босинг.",
                     "❌ Вы еще не подписались на канал!\n\n" +
-                    "Пожалуйста, сначала подпишитесь на канал, затем нажмите \"✅ Проверить подписку\".");
+                    "Пожалуйста, сначала нажмите \"📢 Подписаться на канал\" и подпишитесь, затем нажмите \"✅ Проверить подписку\".");
                 sendMessage(chatId, errorMessage);
             }
-        } else {
-            String errorMessage = getLocalizedMessage(user.getLanguage(),
-                "❌ Iltimos, avval kanalga obuna bo'ling va \"✅ Obunani tekshirish\" tugmasini bosing.",
-                "❌ Илтимос, аввал каналга обуна бўлинг ва \"✅ Обунани текшириш\" тугмасини босинг.",
-                "❌ Пожалуйста, сначала подпишитесь на канал и нажмите \"✅ Проверить подписку\".");
-            sendMessage(chatId, errorMessage);
         }
+    }
+    
+    private void handleChannelSubscriptionState(Message message, User user, Long chatId) {
+        // This method is now mainly for handling any text messages during subscription state
+        // The actual subscription checking is handled via inline button callbacks
+        String waitingMessage = getLocalizedMessage(user.getLanguage(),
+            "⏳ Iltimos, avval kanalga obuna bo'ling va \"✅ Obunani tekshirish\" tugmasini bosing.",
+            "⏳ Илтимос, аввал каналга обуна бўлинг ва \"✅ Обунани текшириш\" тугмасини босинг.",
+            "⏳ Пожалуйста, сначала подпишитесь на канал и нажмите \"✅ Проверить подписку\".");
+        sendMessage(chatId, waitingMessage);
     }
     
     private boolean checkChannelSubscription(Long userId) {
