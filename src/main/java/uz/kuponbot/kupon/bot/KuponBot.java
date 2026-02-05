@@ -31,11 +31,13 @@ import lombok.extern.slf4j.Slf4j;
 import uz.kuponbot.kupon.entity.Coupon;
 import uz.kuponbot.kupon.entity.Order;
 import uz.kuponbot.kupon.entity.User;
+import uz.kuponbot.kupon.entity.Voucher;
 import uz.kuponbot.kupon.service.BroadcastService;
 import uz.kuponbot.kupon.service.CouponService;
 import uz.kuponbot.kupon.service.NotificationService;
 import uz.kuponbot.kupon.service.OrderService;
 import uz.kuponbot.kupon.service.UserService;
+import uz.kuponbot.kupon.service.VoucherService;
 
 @Component
 @RequiredArgsConstructor
@@ -47,6 +49,7 @@ public class KuponBot extends TelegramLongPollingBot {
     private final OrderService orderService;
     private final NotificationService notificationService;
     private final BroadcastService broadcastService;
+    private final VoucherService voucherService;
     
     @Value("${telegram.bot.token}")
     private String botToken;
@@ -674,18 +677,21 @@ public class KuponBot extends TelegramLongPollingBot {
                 row1.add("🛒 Дўкон");
                 row1.add("👤 Профил");
                 
+                row2.add("💬 Фикр билдириш");
                 row2.add("ℹ️ Ёрдам");
             }
             case "ru" -> {
                 row1.add("🛒 Магазин");
                 row1.add("👤 Профиль");
                 
+                row2.add("💬 Оставить отзыв");
                 row2.add("ℹ️ Помощь");
             }
             default -> {
                 row1.add("🛒 Do'kon");
                 row1.add("👤 Profil");
                 
+                row2.add("💬 Fikr bildirish");
                 row2.add("ℹ️ Yordam");
             }
         }
@@ -708,16 +714,19 @@ public class KuponBot extends TelegramLongPollingBot {
             // Uzbek Latin menu items
             case "🛒 Do'kon" -> openShop(chatId, user.getLanguage());
             case "👤 Profil" -> showUserProfile(user, chatId);
+            case "💬 Fikr bildirish" -> showReviewRequest(chatId, user.getLanguage());
             case "ℹ️ Yordam" -> showHelp(chatId, user.getLanguage());
             
             // Uzbek Cyrillic menu items
             case "🛒 Дўкон" -> openShop(chatId, user.getLanguage());
             case "👤 Профил" -> showUserProfile(user, chatId);
+            case "💬 Фикр билдириш" -> showReviewRequest(chatId, user.getLanguage());
             case "ℹ️ Ёрдам" -> showHelp(chatId, user.getLanguage());
             
             // Russian menu items
             case "🛒 Магазин" -> openShop(chatId, user.getLanguage());
             case "👤 Профиль" -> showUserProfile(user, chatId);
+            case "💬 Оставить отзыв" -> showReviewRequest(chatId, user.getLanguage());
             case "ℹ️ Помощь" -> showHelp(chatId, user.getLanguage());
             
             // Common commands
@@ -815,6 +824,15 @@ public class KuponBot extends TelegramLongPollingBot {
             .filter(c -> c.getStatus() == Coupon.CouponStatus.ACTIVE)
             .count();
         
+        // Voucher ma'lumotlarini olish
+        List<Voucher> userVouchers = voucherService.getUserVouchers(user);
+        long activeVouchers = userVouchers.stream()
+            .filter(v -> v.getStatus() == Voucher.VoucherStatus.ACTIVE)
+            .count();
+        long usedVouchers = userVouchers.stream()
+            .filter(v -> v.getStatus() == Voucher.VoucherStatus.USED)
+            .count();
+        
         String profileMessage;
         switch (user.getLanguage()) {
             case "uz_cyrl" -> profileMessage = String.format(
@@ -826,6 +844,9 @@ public class KuponBot extends TelegramLongPollingBot {
                 "🎂 Туғилган сана: %s\n" +
                 "🎫 Жами купонлар: %d\n" +
                 "✅ Фаол купонлар: %d\n" +
+                "🎟️ Жами ваучерлар: %d\n" +
+                "✅ Фаол ваучерлар: %d\n" +
+                "✅ Ишлатилган ваучерлар: %d\n" +
                 "📅 Рўйхатдан ўтган: %s",
                 user.getFirstName(),
                 user.getLastName(),
@@ -834,17 +855,23 @@ public class KuponBot extends TelegramLongPollingBot {
                 user.getBirthDate() != null ? user.getBirthDate() : "Киритилмаган",
                 userCoupons.size(),
                 (int) activeCoupons,
+                userVouchers.size(),
+                (int) activeVouchers,
+                (int) usedVouchers,
                 user.getCreatedAt().toLocalDate()
             );
             case "ru" -> profileMessage = String.format(
                 "👤 Ваш профиль:\n\n" +
-                " Имя: %s\n" +
+                "📝 Имя: %s\n" +
                 "📝 Фамилия: %s\n" +
                 "📱 Телефон: %s\n" +
                 "👤 Username: %s\n" +
                 "🎂 Дата рождения: %s\n" +
                 "🎫 Всего купонов: %d\n" +
                 "✅ Активных купонов: %d\n" +
+                "🎟️ Всего ваучеров: %d\n" +
+                "✅ Активных ваучеров: %d\n" +
+                "✅ Использованных ваучеров: %d\n" +
                 "📅 Зарегистрирован: %s",
                 user.getFirstName(),
                 user.getLastName(),
@@ -853,6 +880,9 @@ public class KuponBot extends TelegramLongPollingBot {
                 user.getBirthDate() != null ? user.getBirthDate() : "Не указано",
                 userCoupons.size(),
                 (int) activeCoupons,
+                userVouchers.size(),
+                (int) activeVouchers,
+                (int) usedVouchers,
                 user.getCreatedAt().toLocalDate()
             );
             default -> profileMessage = String.format(
@@ -864,6 +894,9 @@ public class KuponBot extends TelegramLongPollingBot {
                 "🎂 Tug'ilgan sana: %s\n" +
                 "🎫 Jami kuponlar: %d\n" +
                 "✅ Faol kuponlar: %d\n" +
+                "🎟️ Jami voucherlar: %d\n" +
+                "✅ Faol voucherlar: %d\n" +
+                "✅ Ishlatilgan voucherlar: %d\n" +
                 "📅 Ro'yxatdan o'tgan: %s",
                 user.getFirstName(),
                 user.getLastName(),
@@ -872,11 +905,130 @@ public class KuponBot extends TelegramLongPollingBot {
                 user.getBirthDate() != null ? user.getBirthDate() : "Kiritilmagan",
                 userCoupons.size(),
                 (int) activeCoupons,
+                userVouchers.size(),
+                (int) activeVouchers,
+                (int) usedVouchers,
                 user.getCreatedAt().toLocalDate()
             );
         }
         
+        // Agar faol voucherlar bo'lsa, ularni alohida ko'rsatish
+        if (activeVouchers > 0) {
+            String voucherDetails = getActiveVoucherDetails(userVouchers, user.getLanguage());
+            profileMessage += "\n\n" + voucherDetails;
+        }
+        
+        // Agar ishlatilgan voucherlar bo'lsa, ularni ham ko'rsatish
+        if (usedVouchers > 0) {
+            String usedVoucherDetails = getUsedVoucherDetails(userVouchers, user.getLanguage());
+            profileMessage += "\n\n" + usedVoucherDetails;
+        }
+        
         sendMessage(chatId, profileMessage);
+    }
+    
+    private String getActiveVoucherDetails(List<Voucher> vouchers, String language) {
+        StringBuilder details = new StringBuilder();
+        
+        String header = switch (language) {
+            case "uz_cyrl" -> "🎟️ Фаол ваучерларингиз:";
+            case "ru" -> "🎟️ Ваши активные ваучеры:";
+            default -> "🎟️ Faol voucherlaringiz:";
+        };
+        
+        details.append(header).append("\n");
+        
+        vouchers.stream()
+            .filter(v -> v.getStatus() == Voucher.VoucherStatus.ACTIVE)
+            .forEach(voucher -> {
+                String typeText = switch (voucher.getType()) {
+                    case BIRTHDAY -> switch (language) {
+                        case "uz_cyrl" -> "🎂 Туғилган кун";
+                        case "ru" -> "🎂 День рождения";
+                        default -> "🎂 Tug'ilgan kun";
+                    };
+                    case ANNIVERSARY -> switch (language) {
+                        case "uz_cyrl" -> "🎉 Юбилей";
+                        case "ru" -> "🎉 Юбилей";
+                        default -> "🎉 Yubiley";
+                    };
+                    case SPECIAL -> switch (language) {
+                        case "uz_cyrl" -> "⭐ Махсус";
+                        case "ru" -> "⭐ Специальный";
+                        default -> "⭐ Maxsus";
+                    };
+                };
+                
+                long daysLeft = voucher.getDaysUntilExpiry();
+                String expiryText = switch (language) {
+                    case "uz_cyrl" -> daysLeft > 0 ? 
+                        String.format("⏰ %d кун қолди", daysLeft) : "⚠️ Бугун тугайди";
+                    case "ru" -> daysLeft > 0 ? 
+                        String.format("⏰ %d дней осталось", daysLeft) : "⚠️ Истекает сегодня";
+                    default -> daysLeft > 0 ? 
+                        String.format("⏰ %d kun qoldi", daysLeft) : "⚠️ Bugun tugaydi";
+                };
+                
+                details.append(String.format(
+                    "\n• %s\n  💰 %,d so'm\n  🔑 %s\n  %s\n",
+                    typeText,
+                    voucher.getAmount(),
+                    voucher.getCode().toUpperCase(),
+                    expiryText
+                ));
+            });
+        
+        return details.toString();
+    }
+    
+    private String getUsedVoucherDetails(List<Voucher> vouchers, String language) {
+        StringBuilder details = new StringBuilder();
+        
+        String header = switch (language) {
+            case "uz_cyrl" -> "🎟️ Ишлатилган ваучерларингиз:";
+            case "ru" -> "🎟️ Ваши использованные ваучеры:";
+            default -> "🎟️ Ishlatilgan voucherlaringiz:";
+        };
+        
+        details.append(header).append("\n");
+        
+        vouchers.stream()
+            .filter(v -> v.getStatus() == Voucher.VoucherStatus.USED)
+            .forEach(voucher -> {
+                String typeText = switch (voucher.getType()) {
+                    case BIRTHDAY -> switch (language) {
+                        case "uz_cyrl" -> "🎂 Туғилган кун";
+                        case "ru" -> "🎂 День рождения";
+                        default -> "🎂 Tug'ilgan kun";
+                    };
+                    case ANNIVERSARY -> switch (language) {
+                        case "uz_cyrl" -> "🎉 Юбилей";
+                        case "ru" -> "🎉 Юбилей";
+                        default -> "🎉 Yubiley";
+                    };
+                    case SPECIAL -> switch (language) {
+                        case "uz_cyrl" -> "⭐ Махсус";
+                        case "ru" -> "⭐ Специальный";
+                        default -> "⭐ Maxsus";
+                    };
+                };
+                
+                String usedDateText = switch (language) {
+                    case "uz_cyrl" -> "✅ Ишлатилган: " + voucher.getUsedAt().toLocalDate();
+                    case "ru" -> "✅ Использован: " + voucher.getUsedAt().toLocalDate();
+                    default -> "✅ Ishlatilgan: " + voucher.getUsedAt().toLocalDate();
+                };
+                
+                details.append(String.format(
+                    "\n• %s\n  💰 %,d so'm\n  🔑 %s\n  %s\n",
+                    typeText,
+                    voucher.getAmount(),
+                    voucher.getCode().toUpperCase(),
+                    usedDateText
+                ));
+            });
+        
+        return details.toString();
     }
     
     private void showHelp(Long chatId, String language) {
@@ -917,6 +1069,40 @@ public class KuponBot extends TelegramLongPollingBot {
         );
         
         sendMessage(chatId, helpMessage);
+    }
+    
+    private void showReviewRequest(Long chatId, String language) {
+        String reviewMessage = getLocalizedMessage(language,
+            """
+            Aysi Optika xizmatlaridan foydalanganingiz uchun rahmat 🤍
+            
+            Agar 1 daqiqa vaqtingizni ajratsangiz, quyidagi havola orqali biz haqimizda fikringizni yozib qoldirishingizni so'raymiz:
+            
+            👉 https://yandex.uz/maps/org/200173416586/reviews/?ll=60.631547%2C41.557659&z=16
+            
+            Sizning fikringiz bizni yanada yaxshiroq bo'lishga undaydi. Oldindan rahmat! 🙏
+            """,
+            """
+            Aysi Optika хизматларидан фойдаланганингиз учун раҳмат 🤍
+            
+            Агар 1 дақиқа вақтингизни ажратсангиз, қуйидаги ҳавола орқали биз ҳақимизда фикрингизни ёзиб қолдиришингизни сўраймиз:
+            
+            👉 https://yandex.uz/maps/org/200173416586/reviews/?ll=60.631547%2C41.557659&z=16
+            
+            Сизнинг фикрингиз бизни янада яхшироқ бўлишга ундайди. Олдиндан раҳмат! 🙏
+            """,
+            """
+            Спасибо за использование услуг Aysi Optika 🤍
+            
+            Если вы можете уделить 1 минуту своего времени, мы просим вас оставить отзыв о нас по следующей ссылке:
+            
+            👉 https://yandex.uz/maps/org/200173416586/reviews/?ll=60.631547%2C41.557659&z=16
+            
+            Ваше мнение мотивирует нас становиться еще лучше. Заранее спасибо! 🙏
+            """
+        );
+        
+        sendMessage(chatId, reviewMessage);
     }
     
     private void openShop(Long chatId, String language) {

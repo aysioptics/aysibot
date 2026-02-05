@@ -26,11 +26,13 @@ import uz.kuponbot.kupon.dto.OrderDto;
 import uz.kuponbot.kupon.dto.OrderItemDto;
 import uz.kuponbot.kupon.dto.ProductDto;
 import uz.kuponbot.kupon.dto.UserDto;
+import uz.kuponbot.kupon.dto.VoucherDto;
 import uz.kuponbot.kupon.entity.Coupon;
 import uz.kuponbot.kupon.entity.Order;
 import uz.kuponbot.kupon.entity.OrderItem;
 import uz.kuponbot.kupon.entity.Product;
 import uz.kuponbot.kupon.entity.User;
+import uz.kuponbot.kupon.entity.Voucher;
 import uz.kuponbot.kupon.service.BroadcastService;
 import uz.kuponbot.kupon.service.CouponService;
 import uz.kuponbot.kupon.service.ExcelExportService;
@@ -38,6 +40,7 @@ import uz.kuponbot.kupon.service.NotificationService;
 import uz.kuponbot.kupon.service.OrderService;
 import uz.kuponbot.kupon.service.ProductService;
 import uz.kuponbot.kupon.service.UserService;
+import uz.kuponbot.kupon.service.VoucherService;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -52,29 +55,21 @@ public class AdminController {
     private final NotificationService notificationService;
     private final ExcelExportService excelExportService;
     private final BroadcastService broadcastService;
+    private final VoucherService voucherService;
     
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsDto> getStats() {
         long totalUsers = userService.getTotalUsersCount();
-        long totalCoupons = couponService.getTotalCouponsCount();
         long totalProducts = productService.getTotalProductsCount();
-        long totalOrders = orderService.getTotalOrdersCount();
-        
-        List<Coupon> allCoupons = couponService.getAllCoupons();
-        long activeCoupons = allCoupons.stream()
-            .filter(c -> c.getStatus() == Coupon.CouponStatus.ACTIVE)
-            .count();
-        long usedCoupons = allCoupons.stream()
-            .filter(c -> c.getStatus() == Coupon.CouponStatus.USED)
-            .count();
+        long totalVouchers = voucherService.getTotalVouchersCount();
         
         AdminStatsDto stats = new AdminStatsDto(
             totalUsers,
-            totalCoupons,
-            activeCoupons,
-            usedCoupons,
             totalProducts,
-            totalOrders
+            totalVouchers,
+            voucherService.getActiveVouchersCount(),
+            voucherService.getUsedVouchersCount(),
+            voucherService.getExpiredVouchersCount()
         );
         
         return ResponseEntity.ok(stats);
@@ -183,6 +178,12 @@ public class AdminController {
     public ResponseEntity<String> testThreeMinute() {
         notificationService.testThreeMinuteRegistrations();
         return ResponseEntity.ok("3-minute registration check completed!");
+    }
+    
+    @PostMapping("/test-voucher-reminders")
+    public ResponseEntity<String> testVoucherReminders() {
+        notificationService.testVoucherReminders();
+        return ResponseEntity.ok("Voucher reminder check completed!");
     }
     
     @GetMapping("/export-users")
@@ -307,6 +308,58 @@ public class AdminController {
         }
     }
     
+    @GetMapping("/vouchers")
+    public ResponseEntity<List<VoucherDto>> getAllVouchers() {
+        List<Voucher> vouchers = voucherService.getAllVouchers();
+        List<VoucherDto> voucherDtos = vouchers.stream()
+            .map(this::convertToVoucherDto)
+            .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(voucherDtos);
+    }
+    
+    @GetMapping("/vouchers/{code}")
+    public ResponseEntity<VoucherDto> getVoucherByCode(@PathVariable String code) {
+        Optional<Voucher> voucherOpt = voucherService.findByCode(code);
+        if (voucherOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        return ResponseEntity.ok(convertToVoucherDto(voucherOpt.get()));
+    }
+    
+    @PostMapping("/vouchers/{code}/use")
+    public ResponseEntity<VoucherDto> useVoucher(@PathVariable String code) {
+        try {
+            Voucher voucher = voucherService.useVoucher(code);
+            return ResponseEntity.ok(convertToVoucherDto(voucher));
+        } catch (RuntimeException e) {
+            log.error("Error using voucher {}: {}", code, e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @PostMapping("/vouchers/create")
+    public ResponseEntity<VoucherDto> createSpecialVoucher(@RequestBody CreateVoucherRequest request) {
+        try {
+            Optional<User> userOpt = userService.findByTelegramId(request.getTelegramId());
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Voucher voucher = voucherService.createSpecialVoucher(
+                userOpt.get(), 
+                request.getAmount(), 
+                request.getValidDays()
+            );
+            
+            return ResponseEntity.ok(convertToVoucherDto(voucher));
+        } catch (Exception e) {
+            log.error("Error creating special voucher: ", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
     private UserDto convertToUserDto(User user) {
         List<Coupon> userCoupons = couponService.getUserCoupons(user);
         long activeCoupons = userCoupons.stream()
@@ -374,6 +427,22 @@ public class AdminController {
         );
     }
     
+    private VoucherDto convertToVoucherDto(Voucher voucher) {
+        return new VoucherDto(
+            voucher.getId(),
+            voucher.getCode(),
+            voucher.getUser().getTelegramId(),
+            voucher.getUser().getFullName(),
+            voucher.getAmount(),
+            voucher.getStatus().toString(),
+            voucher.getType().toString(),
+            voucher.getCreatedAt(),
+            voucher.getExpiresAt(),
+            voucher.getUsedAt(),
+            voucher.getDaysUntilExpiry()
+        );
+    }
+    
     @Data
     public static class CreateProductRequest {
         private String name;
@@ -423,5 +492,12 @@ public class AdminController {
             this.success = success;
             this.message = message;
         }
+    }
+    
+    @Data
+    public static class CreateVoucherRequest {
+        private Long telegramId;
+        private Integer amount;
+        private Integer validDays;
     }
 }

@@ -22,8 +22,8 @@ public class DataInitializer implements CommandLineRunner {
             createSampleProducts();
         }
         
-        // Create admin users if not exist
-        createAdminUsers();
+        // Create admin user if not exist
+        createAdminUser();
     }
     
     private void createSampleProducts() {
@@ -71,35 +71,35 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("✅ Sample products created successfully!");
     }
     
-    private void createAdminUsers() {
+    private void createAdminUser() {
         // Admin 1: IbodullaR
         if (userService.findByTelegramId(1807166165L).isEmpty()) {
             User admin1 = new User();
             admin1.setTelegramId(1807166165L);
             admin1.setFirstName("Ibodulla");
-            admin1.setLastName("Rahimov");
+            admin1.setLastName("Raxmonberganov");
             admin1.setTelegramUsername("@IbodullaR");
-            admin1.setPhoneNumber("+998901234567");
-            admin1.setBirthDate("15.03.1995");
+            admin1.setPhoneNumber("+998904297729");
+            admin1.setBirthDate("19.03.2005");
             admin1.setState(User.UserState.REGISTERED);
             
             userService.save(admin1);
-            System.out.println("✅ Admin 1 (IbodullaR) created successfully!");
+            System.out.println("✅ Admin 1 (Ibodulla Raxmonberganov) created successfully!");
         }
         
-        // Admin 2: Second Admin
-        if (userService.findByTelegramId(987654321L).isEmpty()) {
+        // Admin 2: Cristiano Ronaldo
+        if (userService.findByTelegramId(7543576887L).isEmpty()) {
             User admin2 = new User();
-            admin2.setTelegramId(987654321L);
-            admin2.setFirstName("Admin");
-            admin2.setLastName("Manager");
-            admin2.setTelegramUsername("@AdminManager");
+            admin2.setTelegramId(7543576887L);
+            admin2.setFirstName("Cristiano");
+            admin2.setLastName("Ronaldo");
+            admin2.setTelegramUsername("@developeradmin23");
             admin2.setPhoneNumber("+998909876543");
-            admin2.setBirthDate("20.05.1990");
+            admin2.setBirthDate("11.11.2001");
             admin2.setState(User.UserState.REGISTERED);
             
             userService.save(admin2);
-            System.out.println("✅ Admin 2 (AdminManager) created successfully!");
+            System.out.println("✅ Admin 2 (Cristiano Ronaldo) created successfully!");
         }
     }
 }

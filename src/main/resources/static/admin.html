@@ -203,12 +203,12 @@
                 <div class="stat-label">Jami mahsulotlar</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="totalOrders">-</div>
-                <div class="stat-label">Jami buyurtmalar</div>
+                <div class="stat-number" id="totalVouchers">-</div>
+                <div class="stat-label">Jami voucherlar</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="totalCoupons">-</div>
-                <div class="stat-label">Jami kuponlar</div>
+                <div class="stat-number" id="activeVouchers">-</div>
+                <div class="stat-label">Faol voucherlar</div>
             </div>
         </div>
         
@@ -390,12 +390,73 @@
         </div>
         
         <div class="section">
+            <h2 class="section-title">🎟️ Voucher Boshqaruvi</h2>
+            
+            <!-- Voucher tekshirish va ishlatish -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="margin-bottom: 15px;">Voucher Tekshirish va Ishlatish</h3>
+                <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 15px; align-items: end; margin-bottom: 15px;">
+                    <input type="text" id="voucherCode" placeholder="Voucher kodini kiriting (masalan: a1b2c3d4)" 
+                        style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; text-transform: lowercase;">
+                    <button class="btn" onclick="checkVoucher()" style="background: #17a2b8;">🔍 Tekshirish</button>
+                    <button class="btn" onclick="useVoucher()" style="background: #28a745;">✅ Ishlatish</button>
+                </div>
+                <div id="voucherStatus" style="margin-top: 10px; font-weight: bold;"></div>
+                <div id="voucherDetails" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 5px; display: none;">
+                    <h4>Voucher Ma'lumotlari:</h4>
+                    <div id="voucherInfo"></div>
+                </div>
+            </div>
+            
+            <!-- Barcha voucherlar ro'yxati -->
+            <div style="margin-bottom: 20px;">
+                <h3 style="margin-bottom: 15px;">Barcha Voucherlar</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button class="btn" onclick="loadAllVouchers()" style="background: #007bff;">🔄 Yangilash</button>
+                    <select id="voucherStatusFilter" onchange="applyVoucherFilter()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">Barcha statuslar</option>
+                        <option value="ACTIVE">Faol</option>
+                        <option value="USED">Ishlatilgan</option>
+                        <option value="EXPIRED">Muddati tugagan</option>
+                    </select>
+                    <select id="voucherTypeFilter" onchange="applyVoucherFilter()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">Barcha turlar</option>
+                        <option value="BIRTHDAY">Tug'ilgan kun</option>
+                        <option value="SPECIAL">Maxsus</option>
+                        <option value="ANNIVERSARY">Yubiley</option>
+                    </select>
+                </div>
+                <input type="text" class="search-box" id="voucherSearch" placeholder="Voucher qidirish (kod, foydalanuvchi)..." style="margin-bottom: 15px;" oninput="applyVoucherFilter()">
+                
+                <div id="vouchersLoading" class="loading">Ma'lumotlar yuklanmoqda...</div>
+                <table class="table" id="vouchersTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Kod</th>
+                            <th>Foydalanuvchi</th>
+                            <th>Miqdor</th>
+                            <th>Turi</th>
+                            <th>Status</th>
+                            <th>Yaratilgan</th>
+                            <th>Tugash sanasi</th>
+                            <th>Ishlatilgan</th>
+                            <th>Amal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vouchersTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="section">
             <h2 class="section-title">🔔 Bildirishnomalar</h2>
             <div style="margin-bottom: 20px;">
                 <button class="btn" onclick="testNotifications()" style="background: #17a2b8;">📧 Test xabar yuborish</button>
                 <button class="btn" onclick="testAnniversary()" style="background: #28a745; margin-left: 10px;">🎉 6 oylik yubiley test</button>
                 <button class="btn" onclick="testBirthdays()" style="background: #ffc107; margin-left: 10px;">🎂 Tug'ilgan kun test</button>
                 <button class="btn" onclick="testThreeMinute()" style="background: #dc3545; margin-left: 10px;">⏰ 3 daqiqa test</button>
+                <button class="btn" onclick="testVoucherReminders()" style="background: #6f42c1; margin-left: 10px;">🎟️ Voucher reminder test</button>
                 <p style="margin-top: 10px; color: #666; font-size: 14px;">
                     Bu tugmalar admin'ga test xabarlar yuboradi. Avtomatik xabarlar har kuni soat 09:00 (6 oylik yubiley) va 10:00 (tug'ilgan kunlar) da yuboriladi. 3 daqiqa test har daqiqada tekshiriladi.
                 </p>
@@ -440,6 +501,7 @@
             loadStats();
             loadProducts();
             loadUsers();
+            loadAllVouchers();
             populateYearFilter(); // Yil filtrini avtomatik to'ldirish
         });
         
@@ -466,8 +528,8 @@
                 
                 document.getElementById('totalUsers').textContent = stats.totalUsers;
                 document.getElementById('totalProducts').textContent = stats.totalProducts;
-                document.getElementById('totalOrders').textContent = stats.totalOrders;
-                document.getElementById('totalCoupons').textContent = stats.totalCoupons;
+                document.getElementById('totalVouchers').textContent = stats.totalVouchers || 0;
+                document.getElementById('activeVouchers').textContent = stats.activeVouchers || 0;
             } catch (error) {
                 console.error('Error loading stats:', error);
             }
@@ -864,6 +926,24 @@
             }
         }
         
+        // Test voucher reminders function
+        async function testVoucherReminders() {
+            try {
+                const response = await apiCall(`${API_BASE}/test-voucher-reminders`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    alert('✅ Voucher reminder test muvaffaqiyatli bajarildi!');
+                } else {
+                    alert('❌ Xatolik yuz berdi: ' + response.statusText);
+                }
+            } catch (error) {
+                console.error('Error testing voucher reminders:', error);
+                alert('❌ Xatolik yuz berdi: ' + error.message);
+            }
+        }
+        
         // Send broadcast message
         async function sendBroadcast() {
             const message = document.getElementById('broadcastMessage').value.trim();
@@ -1023,6 +1103,244 @@
                 statusElement.style.color = '#dc3545';
                 alert('❌ Xatolik yuz berdi: ' + error.message);
             }
+        }
+        
+        // Voucher Functions
+        async function checkVoucher() {
+            const code = document.getElementById('voucherCode').value.trim().toLowerCase();
+            const statusElement = document.getElementById('voucherStatus');
+            const detailsDiv = document.getElementById('voucherDetails');
+            const infoDiv = document.getElementById('voucherInfo');
+            
+            if (!code) {
+                alert('❌ Iltimos, voucher kodini kiriting!');
+                return;
+            }
+            
+            try {
+                statusElement.textContent = '🔍 Tekshirilmoqda...';
+                statusElement.style.color = '#007bff';
+                detailsDiv.style.display = 'none';
+                
+                const response = await apiCall(`${API_BASE}/vouchers/${code}`);
+                
+                if (response.ok) {
+                    const voucher = await response.json();
+                    statusElement.textContent = '✅ Voucher topildi!';
+                    statusElement.style.color = '#28a745';
+                    
+                    // Voucher ma'lumotlarini ko'rsatish
+                    const statusText = getVoucherStatusText(voucher.status);
+                    const typeText = getVoucherTypeText(voucher.type);
+                    const expiryInfo = voucher.status === 'ACTIVE' ? 
+                        `⏰ ${voucher.daysUntilExpiry} kun qoldi` : '';
+                    
+                    infoDiv.innerHTML = `
+                        <p><strong>Kod:</strong> ${voucher.code}</p>
+                        <p><strong>Foydalanuvchi:</strong> ${voucher.userFullName} (ID: ${voucher.userTelegramId})</p>
+                        <p><strong>Miqdor:</strong> ${formatPrice(voucher.amount)} so'm</p>
+                        <p><strong>Turi:</strong> ${typeText}</p>
+                        <p><strong>Status:</strong> ${statusText} ${expiryInfo}</p>
+                        <p><strong>Yaratilgan:</strong> ${new Date(voucher.createdAt).toLocaleDateString('uz-UZ')}</p>
+                        <p><strong>Tugash sanasi:</strong> ${new Date(voucher.expiresAt).toLocaleDateString('uz-UZ')}</p>
+                        ${voucher.usedAt ? `<p><strong>Ishlatilgan:</strong> ${new Date(voucher.usedAt).toLocaleDateString('uz-UZ')}</p>` : ''}
+                    `;
+                    detailsDiv.style.display = 'block';
+                    
+                } else if (response.status === 404) {
+                    statusElement.textContent = '❌ Voucher topilmadi';
+                    statusElement.style.color = '#dc3545';
+                    detailsDiv.style.display = 'none';
+                } else {
+                    statusElement.textContent = '❌ Xatolik yuz berdi';
+                    statusElement.style.color = '#dc3545';
+                    detailsDiv.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error checking voucher:', error);
+                statusElement.textContent = '❌ Xatolik yuz berdi';
+                statusElement.style.color = '#dc3545';
+                detailsDiv.style.display = 'none';
+            }
+        }
+        
+        async function useVoucher() {
+            const code = document.getElementById('voucherCode').value.trim().toLowerCase();
+            const statusElement = document.getElementById('voucherStatus');
+            
+            if (!code) {
+                alert('❌ Iltimos, voucher kodini kiriting!');
+                return;
+            }
+            
+            if (!confirm(`Haqiqatan ham ${code} voucherni ishlatildi deb belgilashni xohlaysizmi?`)) {
+                return;
+            }
+            
+            try {
+                statusElement.textContent = '⏳ Ishlatilmoqda...';
+                statusElement.style.color = '#007bff';
+                
+                const response = await apiCall(`${API_BASE}/vouchers/${code}/use`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const voucher = await response.json();
+                    statusElement.textContent = '✅ Voucher muvaffaqiyatli ishlatildi!';
+                    statusElement.style.color = '#28a745';
+                    
+                    // Ma'lumotlarni yangilash
+                    checkVoucher();
+                    loadStats();
+                    loadAllVouchers();
+                    
+                    alert('✅ Voucher muvaffaqiyatli ishlatildi!');
+                } else if (response.status === 404) {
+                    statusElement.textContent = '❌ Voucher topilmadi';
+                    statusElement.style.color = '#dc3545';
+                } else {
+                    statusElement.textContent = '❌ Voucher ishlatib bo\'lmaydi (faol emas yoki muddati tugagan)';
+                    statusElement.style.color = '#dc3545';
+                }
+            } catch (error) {
+                console.error('Error using voucher:', error);
+                statusElement.textContent = '❌ Xatolik yuz berdi';
+                statusElement.style.color = '#dc3545';
+            }
+        }
+        
+        async function loadAllVouchers() {
+            try {
+                document.getElementById('vouchersLoading').style.display = 'block';
+                document.getElementById('vouchersTable').style.display = 'none';
+                
+                const response = await apiCall(`${API_BASE}/vouchers`);
+                const vouchers = await response.json();
+                
+                // Store all vouchers globally for filtering
+                window.allVouchers = vouchers;
+                applyVoucherFilter();
+                
+            } catch (error) {
+                console.error('Error loading vouchers:', error);
+                document.getElementById('vouchersLoading').textContent = 'Xatolik yuz berdi';
+            }
+        }
+        
+        function applyVoucherFilter() {
+            if (!window.allVouchers) {
+                return;
+            }
+            
+            const statusFilter = document.getElementById('voucherStatusFilter').value;
+            const typeFilter = document.getElementById('voucherTypeFilter').value;
+            const searchTerm = document.getElementById('voucherSearch').value.toLowerCase();
+            
+            let filteredVouchers = window.allVouchers.filter(voucher => {
+                // Status filter
+                if (statusFilter && voucher.status !== statusFilter) {
+                    return false;
+                }
+                
+                // Type filter
+                if (typeFilter && voucher.type !== typeFilter) {
+                    return false;
+                }
+                
+                // Search filter
+                if (searchTerm) {
+                    const searchString = `${voucher.code} ${voucher.userFullName} ${voucher.userTelegramId}`.toLowerCase();
+                    if (!searchString.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+            
+            displayVouchers(filteredVouchers);
+        }
+        
+        function displayVouchers(vouchers) {
+            const tbody = document.getElementById('vouchersTableBody');
+            tbody.innerHTML = '';
+            
+            // Show result count
+            const resultText = vouchers.length === window.allVouchers?.length ? 
+                `Jami: ${vouchers.length} ta voucher` : 
+                `Ko'rsatilmoqda: ${vouchers.length} ta / Jami: ${window.allVouchers?.length || 0} ta voucher`;
+            
+            // Add result count display
+            let resultCountDiv = document.getElementById('voucherResultCount');
+            if (!resultCountDiv) {
+                resultCountDiv = document.createElement('div');
+                resultCountDiv.id = 'voucherResultCount';
+                resultCountDiv.style.cssText = 'margin-bottom: 10px; font-size: 14px; color: #666; font-weight: 500;';
+                document.getElementById('vouchersTable').parentNode.insertBefore(resultCountDiv, document.getElementById('vouchersTable'));
+            }
+            resultCountDiv.innerHTML = `<strong>${resultText}</strong>`;
+            
+            if (vouchers.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="9" style="text-align: center; padding: 20px; color: #666;">Hech qanday voucher topilmadi</td>';
+                tbody.appendChild(row);
+            } else {
+                vouchers.forEach(voucher => {
+                    const row = document.createElement('tr');
+                    
+                    const statusText = getVoucherStatusText(voucher.status);
+                    const typeText = getVoucherTypeText(voucher.type);
+                    const expiryInfo = voucher.status === 'ACTIVE' ? 
+                        `${voucher.daysUntilExpiry} kun qoldi` : '';
+                    
+                    row.innerHTML = `
+                        <td><strong>${voucher.code.toUpperCase()}</strong></td>
+                        <td>${voucher.userFullName}<br><small>ID: ${voucher.userTelegramId}</small></td>
+                        <td>${formatPrice(voucher.amount)} so'm</td>
+                        <td>${typeText}</td>
+                        <td>${statusText}<br><small>${expiryInfo}</small></td>
+                        <td>${new Date(voucher.createdAt).toLocaleDateString('uz-UZ')}</td>
+                        <td>${new Date(voucher.expiresAt).toLocaleDateString('uz-UZ')}</td>
+                        <td>${voucher.usedAt ? new Date(voucher.usedAt).toLocaleDateString('uz-UZ') : '-'}</td>
+                        <td>
+                            ${voucher.status === 'ACTIVE' ? 
+                                `<button class="btn" onclick="useVoucherFromTable('${voucher.code}')" style="background: #28a745; font-size: 12px; padding: 5px 10px;">Ishlatish</button>` : 
+                                '-'
+                            }
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            
+            document.getElementById('vouchersLoading').style.display = 'none';
+            document.getElementById('vouchersTable').style.display = 'table';
+        }
+        
+        async function useVoucherFromTable(code) {
+            document.getElementById('voucherCode').value = code;
+            await useVoucher();
+            // Reload vouchers to update the list
+            await loadAllVouchers();
+        }
+        
+        function getVoucherStatusText(status) {
+            const statusMap = {
+                'ACTIVE': '✅ Faol',
+                'USED': '✅ Ishlatilgan',
+                'EXPIRED': '❌ Muddati tugagan'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function getVoucherTypeText(type) {
+            const typeMap = {
+                'BIRTHDAY': '🎂 Tug\'ilgan kun',
+                'ANNIVERSARY': '🎉 Yubiley',
+                'SPECIAL': '⭐ Maxsus'
+            };
+            return typeMap[type] || type;
         }
     </script>
 </body>
