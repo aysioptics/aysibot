@@ -174,10 +174,10 @@ public class AdminController {
         return ResponseEntity.ok("Birthday check completed!");
     }
     
-    @PostMapping("/test-3minute")
-    public ResponseEntity<String> testThreeMinute() {
-        notificationService.testThreeMinuteRegistrations();
-        return ResponseEntity.ok("3-minute registration check completed!");
+    @PostMapping("/test-3day")
+    public ResponseEntity<String> testThreeDay() {
+        notificationService.testThreeDayRegistrations();
+        return ResponseEntity.ok("3-day registration check completed!");
     }
     
     @PostMapping("/test-voucher-reminders")

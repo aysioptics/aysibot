@@ -30,44 +30,37 @@ public class NotificationService {
     @Value("${admin.telegram.ids}")
     private String adminTelegramIds;
     
-    // 3 daqiqalik notification yuborilgan foydalanuvchilarni saqlash
+    // 3 kunlik notification yuborilgan foydalanuvchilarni saqlash
     private final java.util.Set<Long> notifiedUsers = java.util.concurrent.ConcurrentHashMap.newKeySet();
     
-    // Har daqiqada tekshirish (test uchun)
-    @Scheduled(fixedRate = 60000) // 60 soniya = 1 daqiqa
-    public void checkThreeMinuteRegistrations() {
-        log.info("Checking 3-minute registrations...");
+    // Har kuni soat 12:00 da 3 kunlik registratsiyalarni tekshirish
+    @Scheduled(cron = "0 0 12 * * *") // Har kuni soat 12:00 da
+    public void checkThreeDayRegistrations() {
+        log.info("Checking 3-day registrations...");
         
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime threeMinutesAgo = now.minusMinutes(3);
-        LocalDateTime fourMinutesAgo = now.minusMinutes(4);
+        LocalDateTime threeDaysAgo = now.minusDays(3);
+        LocalDateTime fourDaysAgo = now.minusDays(4);
         
         List<User> allUsers = userService.getAllUsers();
         
         for (User user : allUsers) {
             if (user.getCreatedAt() != null && user.getState() == User.UserState.REGISTERED) {
-                // Aniq 3 daqiqa oldin ro'yxatdan o'tgan foydalanuvchilarni topish
-                // 3-4 daqiqa oralig'ida ro'yxatdan o'tganlarni tekshirish
-                if (user.getCreatedAt().isAfter(fourMinutesAgo) && 
-                    user.getCreatedAt().isBefore(threeMinutesAgo)) {
+                // Aniq 3 kun oldin ro'yxatdan o'tgan foydalanuvchilarni topish
+                // 3-4 kun oralig'ida ro'yxatdan o'tganlarni tekshirish
+                if (user.getCreatedAt().isAfter(fourDaysAgo) && 
+                    user.getCreatedAt().isBefore(threeDaysAgo)) {
                     
                     // Agar bu foydalanuvchiga notification yuborilmagan bo'lsa
                     if (!notifiedUsers.contains(user.getTelegramId())) {
-                        log.info("Found user registered 3 minutes ago: {} at {}", 
+                        log.info("Found user registered 3 days ago: {} at {}", 
                             user.getTelegramId(), user.getCreatedAt());
                         
-                        sendThreeMinuteRegistrationNotification(user);
+                        sendThreeDayRegistrationNotification(user);
                         notifiedUsers.add(user.getTelegramId()); // Yuborilganligini belgilash
                     }
                 }
             }
-        }
-        
-        // Eski notification'larni tozalash (24 soatdan eski)
-        // Bu yerda oddiy implementatsiya - har soat tozalash
-        if (now.getMinute() == 0) { // Har soat boshida
-            notifiedUsers.clear();
-            log.info("Cleared notified users cache");
         }
     }
     
@@ -376,13 +369,13 @@ public class NotificationService {
         sendNotificationToAdmin(testMessage);
     }
     
-    private void sendThreeMinuteRegistrationNotification(User user) {
+    private void sendThreeDayRegistrationNotification(User user) {
         String usernameInfo = user.getTelegramUsername() != null ? 
             user.getTelegramUsername() : "Username yo'q";
             
         String message = String.format(
             """
-            🆕 3 Daqiqalik Test Notification!
+            🆕 3 Kunlik Notification!
             
             👤 Yangi foydalanuvchi: %s %s
             👤 Username: %s
@@ -390,9 +383,9 @@ public class NotificationService {
             🎂 Tug'ilgan sana: %s
             📅 Ro'yxatdan o'tgan: %s
             🆔 Telegram ID: %d
-            ⏰ 3 daqiqa oldin ro'yxatdan o'tdi!
+            ⏰ 3 kun oldin ro'yxatdan o'tdi!
             
-            Bu test notification - haqiqiy tizimda 6 oy va tug'ilgan kunlar uchun ishlaydi.
+            Bu foydalanuvchi 3 kun oldin botga ro'yxatdan o'tgan.
             """,
             user.getFirstName(),
             user.getLastName(),
@@ -404,7 +397,7 @@ public class NotificationService {
         );
         
         sendNotificationToAdmin(message);
-        log.info("Sent 3-minute registration notification for user: {}", user.getTelegramId());
+        log.info("Sent 3-day registration notification for user: {}", user.getTelegramId());
     }
     
     // 6 oylik yubiley test uchun
@@ -419,10 +412,10 @@ public class NotificationService {
         checkBirthdays();
     }
     
-    // Test 3 daqiqalik registration uchun
-    public void testThreeMinuteRegistrations() {
-        log.info("Testing 3-minute registration notifications...");
-        checkThreeMinuteRegistrations();
+    // Test 3 kunlik registration uchun
+    public void testThreeDayRegistrations() {
+        log.info("Testing 3-day registration notifications...");
+        checkThreeDayRegistrations();
     }
     
     // Test voucher reminders uchun

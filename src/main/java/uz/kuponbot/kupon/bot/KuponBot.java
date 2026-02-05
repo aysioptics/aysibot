@@ -671,6 +671,7 @@ public class KuponBot extends TelegramLongPollingBot {
         
         KeyboardRow row1 = new KeyboardRow();
         KeyboardRow row2 = new KeyboardRow();
+        KeyboardRow row3 = new KeyboardRow();
         
         switch (language) {
             case "uz_cyrl" -> {
@@ -678,26 +679,33 @@ public class KuponBot extends TelegramLongPollingBot {
                 row1.add("👤 Профил");
                 
                 row2.add("💬 Фикр билдириш");
-                row2.add("ℹ️ Ёрдам");
+                row2.add("📋 Сўровномада қатнашиш");
+                
+                row3.add("ℹ️ Ёрдам");
             }
             case "ru" -> {
                 row1.add("🛒 Магазин");
                 row1.add("👤 Профиль");
                 
                 row2.add("💬 Оставить отзыв");
-                row2.add("ℹ️ Помощь");
+                row2.add("📋 Участвовать в опросе");
+                
+                row3.add("ℹ️ Помощь");
             }
             default -> {
                 row1.add("🛒 Do'kon");
                 row1.add("👤 Profil");
                 
                 row2.add("💬 Fikr bildirish");
-                row2.add("ℹ️ Yordam");
+                row2.add("📋 So'rovnomada qatnashish");
+                
+                row3.add("ℹ️ Yordam");
             }
         }
         
         keyboard.add(row1);
         keyboard.add(row2);
+        keyboard.add(row3);
         keyboardMarkup.setKeyboard(keyboard);
         
         return keyboardMarkup;
@@ -715,18 +723,21 @@ public class KuponBot extends TelegramLongPollingBot {
             case "🛒 Do'kon" -> openShop(chatId, user.getLanguage());
             case "👤 Profil" -> showUserProfile(user, chatId);
             case "💬 Fikr bildirish" -> showReviewRequest(chatId, user.getLanguage());
+            case "📋 So'rovnomada qatnashish" -> showSurveyRequest(chatId, user.getLanguage());
             case "ℹ️ Yordam" -> showHelp(chatId, user.getLanguage());
             
             // Uzbek Cyrillic menu items
             case "🛒 Дўкон" -> openShop(chatId, user.getLanguage());
             case "👤 Профил" -> showUserProfile(user, chatId);
             case "💬 Фикр билдириш" -> showReviewRequest(chatId, user.getLanguage());
+            case "📋 Сўровномада қатнашиш" -> showSurveyRequest(chatId, user.getLanguage());
             case "ℹ️ Ёрдам" -> showHelp(chatId, user.getLanguage());
             
             // Russian menu items
             case "🛒 Магазин" -> openShop(chatId, user.getLanguage());
             case "👤 Профиль" -> showUserProfile(user, chatId);
             case "💬 Оставить отзыв" -> showReviewRequest(chatId, user.getLanguage());
+            case "📋 Участвовать в опросе" -> showSurveyRequest(chatId, user.getLanguage());
             case "ℹ️ Помощь" -> showHelp(chatId, user.getLanguage());
             
             // Common commands
@@ -740,9 +751,9 @@ public class KuponBot extends TelegramLongPollingBot {
                 sendMessage(chatId, idMessage);
             }
             case "/testnotify" -> handleTestNotificationCommand(user, chatId);
+            case "/test3day" -> handleTest3DayCommand(user, chatId);
             case "/testanniversary" -> handleTestAnniversaryCommand(user, chatId);
             case "/testbirthday" -> handleTestBirthdayCommand(user, chatId);
-            case "/test3minute" -> handleTest3MinuteCommand(user, chatId);
             case "/broadcast" -> handleBroadcastCommand(message, user, chatId);
             default -> {
                 String errorMessage = getLocalizedMessage(user.getLanguage(),
@@ -819,11 +830,6 @@ public class KuponBot extends TelegramLongPollingBot {
     }
     
     private void showUserProfile(User user, Long chatId) {
-        List<Coupon> userCoupons = couponService.getUserCoupons(user);
-        long activeCoupons = userCoupons.stream()
-            .filter(c -> c.getStatus() == Coupon.CouponStatus.ACTIVE)
-            .count();
-        
         // Voucher ma'lumotlarini olish
         List<Voucher> userVouchers = voucherService.getUserVouchers(user);
         long activeVouchers = userVouchers.stream()
@@ -842,8 +848,6 @@ public class KuponBot extends TelegramLongPollingBot {
                 "📱 Телефон: %s\n" +
                 "👤 Username: %s\n" +
                 "🎂 Туғилган сана: %s\n" +
-                "🎫 Жами купонлар: %d\n" +
-                "✅ Фаол купонлар: %d\n" +
                 "🎟️ Жами ваучерлар: %d\n" +
                 "✅ Фаол ваучерлар: %d\n" +
                 "✅ Ишлатилган ваучерлар: %d\n" +
@@ -853,8 +857,6 @@ public class KuponBot extends TelegramLongPollingBot {
                 user.getPhoneNumber(),
                 user.getTelegramUsername() != null ? user.getTelegramUsername() : "Username йўқ",
                 user.getBirthDate() != null ? user.getBirthDate() : "Киритилмаган",
-                userCoupons.size(),
-                (int) activeCoupons,
                 userVouchers.size(),
                 (int) activeVouchers,
                 (int) usedVouchers,
@@ -867,8 +869,6 @@ public class KuponBot extends TelegramLongPollingBot {
                 "📱 Телефон: %s\n" +
                 "👤 Username: %s\n" +
                 "🎂 Дата рождения: %s\n" +
-                "🎫 Всего купонов: %d\n" +
-                "✅ Активных купонов: %d\n" +
                 "🎟️ Всего ваучеров: %d\n" +
                 "✅ Активных ваучеров: %d\n" +
                 "✅ Использованных ваучеров: %d\n" +
@@ -878,8 +878,6 @@ public class KuponBot extends TelegramLongPollingBot {
                 user.getPhoneNumber(),
                 user.getTelegramUsername() != null ? user.getTelegramUsername() : "Username нет",
                 user.getBirthDate() != null ? user.getBirthDate() : "Не указано",
-                userCoupons.size(),
-                (int) activeCoupons,
                 userVouchers.size(),
                 (int) activeVouchers,
                 (int) usedVouchers,
@@ -892,8 +890,6 @@ public class KuponBot extends TelegramLongPollingBot {
                 "📱 Telefon: %s\n" +
                 "👤 Username: %s\n" +
                 "🎂 Tug'ilgan sana: %s\n" +
-                "🎫 Jami kuponlar: %d\n" +
-                "✅ Faol kuponlar: %d\n" +
                 "🎟️ Jami voucherlar: %d\n" +
                 "✅ Faol voucherlar: %d\n" +
                 "✅ Ishlatilgan voucherlar: %d\n" +
@@ -903,8 +899,6 @@ public class KuponBot extends TelegramLongPollingBot {
                 user.getPhoneNumber(),
                 user.getTelegramUsername() != null ? user.getTelegramUsername() : "Username yo'q",
                 user.getBirthDate() != null ? user.getBirthDate() : "Kiritilmagan",
-                userCoupons.size(),
-                (int) activeCoupons,
                 userVouchers.size(),
                 (int) activeVouchers,
                 (int) usedVouchers,
@@ -1103,6 +1097,40 @@ public class KuponBot extends TelegramLongPollingBot {
         );
         
         sendMessage(chatId, reviewMessage);
+    }
+    
+    private void showSurveyRequest(Long chatId, String language) {
+        String surveyMessage = getLocalizedMessage(language,
+            """
+            📋 So'rovnomada qatnashing!
+            
+            Bizning xizmatlarimizni yaxshilash uchun sizning fikringiz muhim. Iltimos, quyidagi so'rovnomani to'ldiring:
+            
+            👉 https://docs.google.com/forms/d/e/1FAIpQLSfkeOTsYmrDmmDL0U3CNzN0htnC71M551K_8h8Q_23AKxtXlg/viewform?usp=header
+            
+            So'rovnoma 2-3 daqiqa vaqt oladi. Sizning javoblaringiz bizga yanada yaxshi xizmat ko'rsatishga yordam beradi! 🙏
+            """,
+            """
+            📋 Сўровномада қатнашинг!
+            
+            Бизнинг хизматларимизни яхшилаш учун сизнинг фикрингиз муҳим. Илтимос, қуйидаги сўровномани тўлдиринг:
+            
+            👉 https://docs.google.com/forms/d/e/1FAIpQLSfkeOTsYmrDmmDL0U3CNzN0htnC71M551K_8h8Q_23AKxtXlg/viewform?usp=header
+            
+            Сўровнома 2-3 дақиқа вақт олади. Сизнинг жавобларингиз бизга янада яхши хизмат кўрсатишга ёрдам беради! 🙏
+            """,
+            """
+            📋 Участвуйте в опросе!
+            
+            Ваше мнение важно для улучшения наших услуг. Пожалуйста, заполните следующий опрос:
+            
+            👉 https://docs.google.com/forms/d/e/1FAIpQLSfkeOTsYmrDmmDL0U3CNzN0htnC71M551K_8h8Q_23AKxtXlg/viewform?usp=header
+            
+            Опрос займет 2-3 минуты. Ваши ответы помогут нам предоставлять еще лучший сервис! 🙏
+            """
+        );
+        
+        sendMessage(chatId, surveyMessage);
     }
     
     private void openShop(Long chatId, String language) {
@@ -1367,6 +1395,36 @@ public class KuponBot extends TelegramLongPollingBot {
         sendMessage(chatId, successMessage);
     }
     
+    private void handleTest3DayCommand(User user, Long chatId) {
+        // Admin huquqlarini tekshirish
+        Long[] adminTelegramIds = {1807166165L, 7543576887L};
+        
+        boolean isAdmin = false;
+        for (Long adminId : adminTelegramIds) {
+            if (user.getTelegramId().equals(adminId)) {
+                isAdmin = true;
+                break;
+            }
+        }
+        
+        if (!isAdmin) {
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Sizda admin huquqlari yo'q.",
+                "❌ Сизда админ ҳуқуқлари йўқ.",
+                "❌ У вас нет прав администратора.");
+            sendMessage(chatId, errorMessage);
+            return;
+        }
+        
+        // 3 kunlik test notification yuborish
+        notificationService.testThreeDayRegistrations();
+        String successMessage = getLocalizedMessage(user.getLanguage(),
+            "✅ 3 kunlik test bajarildi!",
+            "✅ 3 кунлик тест бажарилди!",
+            "✅ 3-дневный тест выполнен!");
+        sendMessage(chatId, successMessage);
+    }
+    
     private void handleTestAnniversaryCommand(User user, Long chatId) {
         // Admin huquqlarini tekshirish
         Long[] adminTelegramIds = {1807166165L, 7543576887L};
@@ -1424,36 +1482,6 @@ public class KuponBot extends TelegramLongPollingBot {
             "✅ Tug'ilgan kun test bajarildi!",
             "✅ Туғилган кун тест бажарилди!",
             "✅ Тест дня рождения выполнен!");
-        sendMessage(chatId, successMessage);
-    }
-    
-    private void handleTest3MinuteCommand(User user, Long chatId) {
-        // Admin huquqlarini tekshirish
-        Long[] adminTelegramIds = {1807166165L, 7543576887L};
-        
-        boolean isAdmin = false;
-        for (Long adminId : adminTelegramIds) {
-            if (user.getTelegramId().equals(adminId)) {
-                isAdmin = true;
-                break;
-            }
-        }
-        
-        if (!isAdmin) {
-            String errorMessage = getLocalizedMessage(user.getLanguage(),
-                "❌ Sizda admin huquqlari yo'q.",
-                "❌ Сизда админ ҳуқуқлари йўқ.",
-                "❌ У вас нет прав администратора.");
-            sendMessage(chatId, errorMessage);
-            return;
-        }
-        
-        // 3 daqiqa test
-        notificationService.testThreeMinuteRegistrations();
-        String successMessage = getLocalizedMessage(user.getLanguage(),
-            "✅ 3 daqiqa test bajarildi!",
-            "✅ 3 дақиқа тест бажарилди!",
-            "✅ 3-минутный тест выполнен!");
         sendMessage(chatId, successMessage);
     }
     

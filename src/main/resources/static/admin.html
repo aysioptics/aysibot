@@ -224,7 +224,22 @@
                     <input type="text" id="productName" placeholder="Mahsulot nomi *" required>
                     <textarea id="productDescription" placeholder="Tavsif"></textarea>
                     <input type="number" id="productPrice" placeholder="Narxi (so'm) *" required>
-                    <input type="url" id="productImageUrl" placeholder="Rasm URL (ixtiyoriy)">
+                    <div style="grid-column: 1 / -1;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">Rasm tanlash:</label>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                            <label style="flex: 1;">
+                                <input type="radio" name="imageType" value="url" checked onchange="toggleImageInput()"> URL orqali
+                            </label>
+                            <label style="flex: 1;">
+                                <input type="radio" name="imageType" value="file" onchange="toggleImageInput()"> Fayl yuklash
+                            </label>
+                        </div>
+                        <input type="url" id="productImageUrl" placeholder="Rasm URL (ixtiyoriy)" style="width: 100%; display: block;">
+                        <input type="file" id="productImageFile" accept="image/*" style="width: 100%; display: none;">
+                        <div id="imagePreview" style="margin-top: 10px; display: none;">
+                            <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
+                    </div>
                     <input type="number" id="productStock" placeholder="Stok miqdori *" required>
                 </div>
                 <div class="form-buttons">
@@ -537,20 +552,82 @@
             document.getElementById('productDescription').value = '';
             document.getElementById('productPrice').value = '';
             document.getElementById('productImageUrl').value = '';
+            document.getElementById('productImageFile').value = '';
             document.getElementById('productStock').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.querySelector('input[name="imageType"][value="url"]').checked = true;
+            toggleImageInput();
         }
+        
+        // Toggle between URL and file input
+        function toggleImageInput() {
+            const imageType = document.querySelector('input[name="imageType"]:checked').value;
+            const urlInput = document.getElementById('productImageUrl');
+            const fileInput = document.getElementById('productImageFile');
+            const preview = document.getElementById('imagePreview');
+            
+            if (imageType === 'url') {
+                urlInput.style.display = 'block';
+                fileInput.style.display = 'none';
+                preview.style.display = 'none';
+            } else {
+                urlInput.style.display = 'none';
+                fileInput.style.display = 'block';
+                preview.style.display = 'none';
+            }
+        }
+        
+        // Preview image when file is selected
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('productImageFile');
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            document.getElementById('previewImg').src = e.target.result;
+                            document.getElementById('imagePreview').style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        });
         
         // Add product
         async function addProduct() {
             const name = document.getElementById('productName').value;
             const description = document.getElementById('productDescription').value;
             const price = document.getElementById('productPrice').value;
-            const imageUrl = document.getElementById('productImageUrl').value;
             const stockQuantity = document.getElementById('productStock').value;
+            const imageType = document.querySelector('input[name="imageType"]:checked').value;
             
             if (!name || !price || !stockQuantity) {
                 alert('Iltimos, majburiy maydonlarni to\'ldiring (*, narx, stok)');
                 return;
+            }
+            
+            let imageUrl = '';
+            
+            // Handle image based on type
+            if (imageType === 'url') {
+                imageUrl = document.getElementById('productImageUrl').value;
+            } else {
+                // Handle file upload
+                const fileInput = document.getElementById('productImageFile');
+                const file = fileInput.files[0];
+                
+                if (file) {
+                    // Convert image to base64
+                    const reader = new FileReader();
+                    imageUrl = await new Promise((resolve) => {
+                        reader.onload = function(e) {
+                            resolve(e.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                }
             }
             
             try {
