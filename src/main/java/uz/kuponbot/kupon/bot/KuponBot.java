@@ -972,7 +972,7 @@ public class KuponBot extends TelegramLongPollingBot {
         shopButton.setText(buttonText);
         
         // Production Vercel HTTPS domain
-        shopButton.setUrl("https://bott-ondv.vercel.app/shop.html");
+        shopButton.setUrl("https://aysi-optics.vercel.app/shop.html");
         
         row.add(shopButton);
         keyboard.add(row);
