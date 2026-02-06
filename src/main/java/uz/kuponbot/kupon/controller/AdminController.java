@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,14 +21,10 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uz.kuponbot.kupon.dto.AdminStatsDto;
-import uz.kuponbot.kupon.dto.OrderDto;
-import uz.kuponbot.kupon.dto.OrderItemDto;
 import uz.kuponbot.kupon.dto.ProductDto;
 import uz.kuponbot.kupon.dto.UserDto;
 import uz.kuponbot.kupon.dto.VoucherDto;
 import uz.kuponbot.kupon.entity.Coupon;
-import uz.kuponbot.kupon.entity.Order;
-import uz.kuponbot.kupon.entity.OrderItem;
 import uz.kuponbot.kupon.entity.Product;
 import uz.kuponbot.kupon.entity.User;
 import uz.kuponbot.kupon.entity.Voucher;
@@ -37,7 +32,6 @@ import uz.kuponbot.kupon.service.BroadcastService;
 import uz.kuponbot.kupon.service.CouponService;
 import uz.kuponbot.kupon.service.ExcelExportService;
 import uz.kuponbot.kupon.service.NotificationService;
-import uz.kuponbot.kupon.service.OrderService;
 import uz.kuponbot.kupon.service.ProductService;
 import uz.kuponbot.kupon.service.UserService;
 import uz.kuponbot.kupon.service.VoucherService;
@@ -51,7 +45,6 @@ public class AdminController {
     private final UserService userService;
     private final CouponService couponService;
     private final ProductService productService;
-    private final OrderService orderService;
     private final NotificationService notificationService;
     private final ExcelExportService excelExportService;
     private final BroadcastService broadcastService;
@@ -136,25 +129,6 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
     
-    @GetMapping("/orders")
-    public ResponseEntity<List<OrderDto>> getAllOrders() {
-        List<Order> orders = orderService.getAllOrders();
-        List<OrderDto> orderDtos = orders.stream()
-            .map(this::convertToOrderDto)
-            .collect(Collectors.toList());
-        
-        return ResponseEntity.ok(orderDtos);
-    }
-    
-    @PutMapping("/orders/{id}/status")
-    public ResponseEntity<OrderDto> updateOrderStatus(@PathVariable Long id, @RequestBody UpdateOrderStatusRequest request) {
-        Order order = orderService.updateOrderStatus(id, Order.OrderStatus.valueOf(request.getStatus()));
-        if (order == null) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        return ResponseEntity.ok(convertToOrderDto(order));
-    }
     
     @PostMapping("/test-notifications")
     public ResponseEntity<String> testNotifications() {
@@ -394,38 +368,6 @@ public class AdminController {
         );
     }
     
-    private OrderDto convertToOrderDto(Order order) {
-        List<OrderItemDto> itemDtos = order.getOrderItems().stream()
-            .map(this::convertToOrderItemDto)
-            .collect(Collectors.toList());
-        
-        return new OrderDto(
-            order.getId(),
-            order.getOrderNumber(),
-            order.getUser().getTelegramId(),
-            order.getCustomerName(),
-            order.getPhoneNumber(),
-            order.getDeliveryAddress(),
-            order.getTotalAmount(),
-            order.getStatus().toString(),
-            order.getNotes(),
-            itemDtos,
-            order.getCreatedAt(),
-            order.getUpdatedAt()
-        );
-    }
-    
-    private OrderItemDto convertToOrderItemDto(OrderItem item) {
-        return new OrderItemDto(
-            item.getId(),
-            item.getProduct().getId(),
-            item.getProduct().getName(),
-            item.getProduct().getImageUrl(),
-            item.getQuantity(),
-            item.getUnitPrice(),
-            item.getTotalPrice()
-        );
-    }
     
     private VoucherDto convertToVoucherDto(Voucher voucher) {
         return new VoucherDto(

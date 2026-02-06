@@ -29,13 +29,11 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uz.kuponbot.kupon.entity.Coupon;
-import uz.kuponbot.kupon.entity.Order;
 import uz.kuponbot.kupon.entity.User;
 import uz.kuponbot.kupon.entity.Voucher;
 import uz.kuponbot.kupon.service.BroadcastService;
 import uz.kuponbot.kupon.service.CouponService;
 import uz.kuponbot.kupon.service.NotificationService;
-import uz.kuponbot.kupon.service.OrderService;
 import uz.kuponbot.kupon.service.UserService;
 import uz.kuponbot.kupon.service.VoucherService;
 
@@ -46,7 +44,6 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private final UserService userService;
     private final CouponService couponService;
-    private final OrderService orderService;
     private final NotificationService notificationService;
     private final BroadcastService broadcastService;
     private final VoucherService voucherService;
@@ -777,69 +774,6 @@ public class KuponBot extends TelegramLongPollingBot {
         }
     }
     
-    private void showUserCoupons(User user, Long chatId) {
-        List<Coupon> coupons = couponService.getUserCoupons(user);
-        
-        if (coupons.isEmpty()) {
-            String emptyMessage = getLocalizedMessage(user.getLanguage(),
-                "❌ Sizda hozircha kuponlar yo'q.",
-                "❌ Сизда ҳозирча купонлар йўқ.",
-                "❌ У вас пока нет купонов.");
-            sendMessage(chatId, emptyMessage);
-            return;
-        }
-        
-        StringBuilder message = new StringBuilder();
-        String headerMessage = getLocalizedMessage(user.getLanguage(),
-            "🎫 Sizning kuponlaringiz:\n\n",
-            "🎫 Сизнинг купонларингиз:\n\n",
-            "🎫 Ваши купоны:\n\n");
-        message.append(headerMessage);
-        
-        for (int i = 0; i < coupons.size(); i++) {
-            Coupon coupon = coupons.get(i);
-            String status = getLocalizedMessage(user.getLanguage(),
-                coupon.getStatus() == Coupon.CouponStatus.ACTIVE ? "✅ Faol" : "❌ Ishlatilgan",
-                coupon.getStatus() == Coupon.CouponStatus.ACTIVE ? "✅ Фаол" : "❌ Ишлатилган",
-                coupon.getStatus() == Coupon.CouponStatus.ACTIVE ? "✅ Активен" : "❌ Использован");
-            
-            String codeLabel = getLocalizedMessage(user.getLanguage(), "Kod", "Код", "Код");
-            message.append(String.format("%d. %s: *%s* - %s\n", i + 1, codeLabel, coupon.getCode(), status));
-        }
-        
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(chatId);
-        sendMessage.setText(message.toString());
-        sendMessage.setParseMode("Markdown");
-        
-        sendMessage(sendMessage);
-    }
-    
-    private void generateNewCoupon(User user, Long chatId) {
-        Coupon newCoupon = couponService.createCouponForUser(user);
-        
-        String message = getLocalizedMessage(user.getLanguage(),
-            String.format(
-                "🎉 Yangi kupon yaratildi!\n\n🎫 Kupon kodi: *%s*\n\nBu kodni saqlang!",
-                newCoupon.getCode()
-            ),
-            String.format(
-                "🎉 Янги купон яратилди!\n\n🎫 Купон коди: *%s*\n\nБу кодни сақланг!",
-                newCoupon.getCode()
-            ),
-            String.format(
-                "🎉 Новый купон создан!\n\n🎫 Код купона: *%s*\n\nСохраните этот код!",
-                newCoupon.getCode()
-            )
-        );
-        
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(chatId);
-        sendMessage.setText(message);
-        sendMessage.setParseMode("Markdown");
-        
-        sendMessage(sendMessage);
-    }
     
     private void showUserProfile(User user, Long chatId) {
         // Voucher ma'lumotlarini olish
@@ -1212,100 +1146,6 @@ public class KuponBot extends TelegramLongPollingBot {
         
         sendMessage.setReplyMarkup(inlineKeyboard);
         sendMessage(sendMessage);
-    }
-    
-    private void showUserOrders(User user, Long chatId) {
-        List<Order> userOrders = orderService.getUserOrders(user);
-        
-        if (userOrders.isEmpty()) {
-            String ordersMessage = getLocalizedMessage(user.getLanguage(),
-                """
-                📦 Sizning buyurtmalaringiz:
-                
-                Hozircha buyurtmalar yo'q.
-                
-                Birinchi buyurtmangizni berish uchun AYSI OPTICS do'konini oching!
-                """,
-                """
-                📦 Сизнинг буюртмаларингиз:
-                
-                Ҳозирча буюртмалар йўқ.
-                
-                Биринчи буюртмангизни бериш учун AYSI OPTICS дўконини очинг!
-                """,
-                """
-                📦 Ваши заказы:
-                
-                Пока заказов нет.
-                
-                Сделайте первый заказ в магазине AYSI OPTICS!
-                """
-            );
-            sendMessage(chatId, ordersMessage);
-            return;
-        }
-        
-        StringBuilder message = new StringBuilder();
-        String headerMessage = getLocalizedMessage(user.getLanguage(),
-            "📦 Sizning buyurtmalaringiz:\n\n",
-            "📦 Сизнинг буюртмаларингиз:\n\n",
-            "📦 Ваши заказы:\n\n");
-        message.append(headerMessage);
-        
-        for (int i = 0; i < userOrders.size(); i++) {
-            Order order = userOrders.get(i);
-            String statusEmoji = getOrderStatusEmoji(order.getStatus());
-            String statusText = getOrderStatusText(order.getStatus(), user.getLanguage());
-            
-            String amountLabel = getLocalizedMessage(user.getLanguage(), "Summa", "Сумма", "Сумма");
-            String dateLabel = getLocalizedMessage(user.getLanguage(), "Sana", "Сана", "Дата");
-            String currency = getLocalizedMessage(user.getLanguage(), "so'm", "сўм", "сум");
-            
-            message.append(String.format(
-                "%d. 🧾 *%s*\n" +
-                "   %s %s\n" +
-                "   💰 %s: %s %s\n" +
-                "   📅 %s: %s\n\n",
-                i + 1,
-                order.getOrderNumber(),
-                statusEmoji,
-                statusText,
-                amountLabel,
-                order.getTotalAmount(),
-                currency,
-                dateLabel,
-                order.getCreatedAt().toLocalDate()
-            ));
-        }
-        
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(chatId);
-        sendMessage.setText(message.toString());
-        sendMessage.setParseMode("Markdown");
-        
-        sendMessage(sendMessage);
-    }
-    
-    private String getOrderStatusEmoji(Order.OrderStatus status) {
-        return switch (status) {
-            case PENDING -> "⏳";
-            case CONFIRMED -> "✅";
-            case PREPARING -> "👨‍🍳";
-            case SHIPPED -> "🚚";
-            case DELIVERED -> "📦";
-            case CANCELLED -> "❌";
-        };
-    }
-    
-    private String getOrderStatusText(Order.OrderStatus status, String language) {
-        return switch (status) {
-            case PENDING -> getLocalizedMessage(language, "Kutilmoqda", "Кутилмоқда", "Ожидает");
-            case CONFIRMED -> getLocalizedMessage(language, "Tasdiqlandi", "Тасдиқланди", "Подтвержден");
-            case PREPARING -> getLocalizedMessage(language, "Tayyorlanmoqda", "Тайёрланмоқда", "Готовится");
-            case SHIPPED -> getLocalizedMessage(language, "Yetkazilmoqda", "Етказилмоқда", "Доставляется");
-            case DELIVERED -> getLocalizedMessage(language, "Yetkazildi", "Етказилди", "Доставлен");
-            case CANCELLED -> getLocalizedMessage(language, "Bekor qilindi", "Бекор қилинди", "Отменен");
-        };
     }
     
     private void sendRegisteredUserWelcome(User user, Long chatId) {
