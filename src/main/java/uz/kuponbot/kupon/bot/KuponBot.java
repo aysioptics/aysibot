@@ -11,12 +11,12 @@ import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -756,11 +756,14 @@ public class KuponBot extends TelegramLongPollingBot {
             case "/testbirthday" -> handleTestBirthdayCommand(user, chatId);
             case "/broadcast" -> handleBroadcastCommand(message, user, chatId);
             default -> {
-                String errorMessage = getLocalizedMessage(user.getLanguage(),
-                    "❌ Noma'lum buyruq. Iltimos, menyudan tanlang.",
-                    "❌ Номаълум буйруқ. Илтимос, менюдан танланг.",
-                    "❌ Неизвестная команда. Пожалуйста, выберите из меню.");
-                sendMessage(chatId, errorMessage);
+                // Foydalanuvchi oddiy xabar yozgan - adminga yuborish
+                forwardMessageToAdmin(message, user);
+                
+                String confirmMessage = getLocalizedMessage(user.getLanguage(),
+                    "✅ Xabaringiz adminga yuborildi. Tez orada javob beramiz!",
+                    "✅ Хабарингиз админга юборилди. Тез орада жавоб берамиз!",
+                    "✅ Ваше сообщение отправлено администратору. Скоро ответим!");
+                sendMessage(chatId, confirmMessage);
             }
         }
     }
@@ -1337,29 +1340,29 @@ public class KuponBot extends TelegramLongPollingBot {
         
         String adminMessage = getLocalizedMessage(user.getLanguage(),
             "🔐 Admin Panel\n\n" +
-            "Admin panelga kirish uchun:\n" +
-            "1. Brauzerda: http://localhost:8080/login.html\n" +
-            "2. Admin kodi: ADMIN2024\n\n" +
             "📊 Tezkor statistika:\n" +
             "👥 Jami foydalanuvchilar: " + userService.getTotalUsersCount() + "\n" +
             "🎫 Jami kuponlar: " + couponService.getTotalCouponsCount() + "\n\n" +
-            "Adminlar: @IbodullaR, @developeradmin23",
+            "Adminlar: @IbodullaR, @developeradmin23\n\n" +
+            "🌐 Admin panelga kirish:\n" +
+            "Brauzerda ochish: http://localhost:8080/login.html\n" +
+            "Admin kodi: ADMIN2024",
             "🔐 Админ Панел\n\n" +
-            "Админ панелга кириш учун:\n" +
-            "1. Браузерда: http://localhost:8080/login.html\n" +
-            "2. Админ коди: ADMIN2024\n\n" +
             "📊 Тезкор статистика:\n" +
-            "� Жами eфойдаланувчилар: " + userService.getTotalUsersCount() + "\n" +
+            "👥 Жами фойдаланувчилар: " + userService.getTotalUsersCount() + "\n" +
             "🎫 Жами купонлар: " + couponService.getTotalCouponsCount() + "\n\n" +
-            "Админлар: @IbodullaR, @developeradmin23",
+            "Админлар: @IbodullaR, @developeradmin23\n\n" +
+            "🌐 Админ панелга кириш:\n" +
+            "Браузерда очиш: http://localhost:8080/login.html\n" +
+            "Админ коди: ADMIN2024",
             "🔐 Панель администратора\n\n" +
-            "Для входа в админ панель:\n" +
-            "1. В браузере: http://localhost:8080/login.html\n" +
-            "2. Код администратора: ADMIN2024\n\n" +
             "📊 Быстрая статистика:\n" +
             "👥 Всего пользователей: " + userService.getTotalUsersCount() + "\n" +
             "🎫 Всего купонов: " + couponService.getTotalCouponsCount() + "\n\n" +
-            "Администраторы: @IbodullaR, @developeradmin23"
+            "Администраторы: @IbodullaR, @developeradmin23\n\n" +
+            "🌐 Вход в админ панель:\n" +
+            "Открыть в браузере: http://localhost:8080/login.html\n" +
+            "Код администратора: ADMIN2024"
         );
         
         sendMessage(chatId, adminMessage);
@@ -1624,6 +1627,37 @@ public class KuponBot extends TelegramLongPollingBot {
                 sendMessage(chatId, errorMessage);
             }
         });
+    }
+    
+    private void forwardMessageToAdmin(Message message, User user) {
+        // Admin ID'larini olish
+        String[] adminIds = {"1807166165", "7543576887"}; // Admin 1 va Admin 2
+        
+        String userInfo = String.format(
+            "📩 Yangi xabar foydalanuvchidan:\n\n" +
+            "👤 Ism: %s %s\n" +
+            "📱 Telefon: %s\n" +
+            "👤 Username: %s\n" +
+            "🆔 Telegram ID: %d\n" +
+            "🎂 Tug'ilgan sana: %s\n\n" +
+            "💬 Xabar:\n%s",
+            user.getFirstName(),
+            user.getLastName(),
+            user.getPhoneNumber(),
+            user.getTelegramUsername() != null ? user.getTelegramUsername() : "Yo'q",
+            user.getTelegramId(),
+            user.getBirthDate() != null ? user.getBirthDate() : "Kiritilmagan",
+            message.getText()
+        );
+        
+        // Har bir adminga yuborish
+        for (String adminId : adminIds) {
+            try {
+                sendMessage(Long.parseLong(adminId), userInfo);
+            } catch (Exception e) {
+                log.error("Error sending message to admin {}: ", adminId, e);
+            }
+        }
     }
     
     private void sendMessage(Long chatId, String text) {
