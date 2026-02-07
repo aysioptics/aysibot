@@ -8,6 +8,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.CopyMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import lombok.RequiredArgsConstructor;
@@ -99,6 +101,68 @@ public class BroadcastService {
             log.error("Unexpected error sending single message to user {}: ", telegramId, e);
             return false;
         }
+    }
+    
+    /**
+     * Video/rasm broadcast qilish metodi
+     * CopyMessage API dan foydalanadi - bu eng tez va samarali usul
+     */
+    public BroadcastResult sendMediaBroadcast(Message originalMessage, TelegramLongPollingBot bot) {
+        log.info("Starting media broadcast to all users");
+        
+        List<User> allUsers = userService.getAllUsers();
+        List<User> registeredUsers = allUsers.stream()
+            .filter(user -> user.getState() == User.UserState.REGISTERED)
+            .toList();
+        
+        if (registeredUsers.isEmpty()) {
+            log.warn("No registered users found for broadcast");
+            return new BroadcastResult(0, 0, 0);
+        }
+        
+        Long fromChatId = originalMessage.getChatId();
+        Integer messageId = originalMessage.getMessageId();
+        
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+        
+        // Parallel ravishda xabar yuborish
+        List<CompletableFuture<Void>> futures = registeredUsers.stream()
+            .map(user -> CompletableFuture.runAsync(() -> {
+                try {
+                    CopyMessage copyMessage = new CopyMessage();
+                    copyMessage.setChatId(user.getTelegramId().toString());
+                    copyMessage.setFromChatId(fromChatId.toString());
+                    copyMessage.setMessageId(messageId);
+                    
+                    bot.execute(copyMessage);
+                    successCount.incrementAndGet();
+                    
+                    // Rate limiting uchun kichik kutish
+                    Thread.sleep(50); // 50ms kutish
+                    
+                } catch (TelegramApiException e) {
+                    failureCount.incrementAndGet();
+                    log.error("Failed to send media broadcast to user {}: {}", 
+                        user.getTelegramId(), e.getMessage());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    failureCount.incrementAndGet();
+                    log.error("Interrupted while sending to user {}", user.getTelegramId());
+                }
+            }))
+            .toList();
+        
+        // Barcha xabarlar yuborilishini kutish
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        
+        int total = registeredUsers.size();
+        int success = successCount.get();
+        int failure = failureCount.get();
+        
+        log.info("Media broadcast completed: {} total, {} success, {} failed", total, success, failure);
+        
+        return new BroadcastResult(total, success, failure);
     }
     
     public static class BroadcastResult {

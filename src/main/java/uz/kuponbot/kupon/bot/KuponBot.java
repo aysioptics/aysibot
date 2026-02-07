@@ -60,6 +60,10 @@ public class KuponBot extends TelegramLongPollingBot {
     @Value("${telegram.channel.id}")
     private String channelId;
     
+    // Pending broadcast message storage
+    private Message pendingBroadcastMessage = null;
+    private Long pendingBroadcastAdminId = null;
+    
     @Override
     public String getBotToken() {
         return botToken;
@@ -135,6 +139,14 @@ public class KuponBot extends TelegramLongPollingBot {
             if (!currentUsername.equals(user.getTelegramUsername())) {
                 user.setTelegramUsername(currentUsername);
                 user = userService.save(user);
+            }
+        }
+        
+        // Admin uchun video/rasm broadcast funksiyasi
+        if (user.getState() == User.UserState.REGISTERED && isAdmin(userId)) {
+            if (message.hasPhoto() || message.hasVideo()) {
+                handleAdminMediaBroadcast(message, user, chatId);
+                return;
             }
         }
         
@@ -548,6 +560,17 @@ public class KuponBot extends TelegramLongPollingBot {
         }
         
         User user = userOpt.get();
+        
+        // Broadcast confirmation callback
+        if (callbackData.equals("confirm_broadcast") && isAdmin(userId)) {
+            handleBroadcastConfirmation(callbackQuery, user, chatId);
+            return;
+        }
+        
+        if (callbackData.equals("cancel_broadcast") && isAdmin(userId)) {
+            handleBroadcastCancellation(callbackQuery, user, chatId);
+            return;
+        }
         
         if ("check_subscription".equals(callbackData) && user.getState() == User.UserState.WAITING_CHANNEL_SUBSCRIPTION) {
             // Answer the callback query first
@@ -1565,5 +1588,169 @@ public class KuponBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             log.error("Error sending message: ", e);
         }
+    }
+    
+    // ========== VIDEO/RASM BROADCAST METODLARI ==========
+    
+    private boolean isAdmin(Long userId) {
+        Long[] adminTelegramIds = {1807166165L, 7543576887L};
+        for (Long adminId : adminTelegramIds) {
+            if (userId.equals(adminId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private void handleAdminMediaBroadcast(Message message, User user, Long chatId) {
+        log.info("Admin {} sent media for broadcast", user.getTelegramId());
+        
+        // Xabarni saqlash
+        pendingBroadcastMessage = message;
+        pendingBroadcastAdminId = chatId;
+        
+        // Tasdiqlash tugmasini ko'rsatish
+        String confirmText = getLocalizedMessage(user.getLanguage(),
+            "📢 Bu postni barcha ro'yxatdan o'tgan foydalanuvchilarga yuborasizmi?",
+            "📢 Бу постни барча рўйхатдан ўтган фойдаланувчиларга юборасизми?",
+            "📢 Отправить этот пост всем зарегистрированным пользователям?");
+        
+        SendMessage confirmMessage = new SendMessage();
+        confirmMessage.setChatId(chatId);
+        confirmMessage.setText(confirmText);
+        confirmMessage.setReplyMarkup(createBroadcastConfirmationKeyboard(user.getLanguage()));
+        
+        sendMessage(confirmMessage);
+    }
+    
+    private InlineKeyboardMarkup createBroadcastConfirmationKeyboard(String language) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+        
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        
+        InlineKeyboardButton confirmButton = new InlineKeyboardButton();
+        confirmButton.setText(getLocalizedMessage(language, "✅ Ha", "✅ Ҳа", "✅ Да"));
+        confirmButton.setCallbackData("confirm_broadcast");
+        
+        InlineKeyboardButton cancelButton = new InlineKeyboardButton();
+        cancelButton.setText(getLocalizedMessage(language, "❌ Yo'q", "❌ Йўқ", "❌ Нет"));
+        cancelButton.setCallbackData("cancel_broadcast");
+        
+        row.add(confirmButton);
+        row.add(cancelButton);
+        keyboard.add(row);
+        
+        markup.setKeyboard(keyboard);
+        return markup;
+    }
+    
+    private void handleBroadcastConfirmation(CallbackQuery callbackQuery, User user, Long chatId) {
+        try {
+            AnswerCallbackQuery answer = new AnswerCallbackQuery();
+            answer.setCallbackQueryId(callbackQuery.getId());
+            answer.setText("Yuborilmoqda...");
+            execute(answer);
+        } catch (TelegramApiException e) {
+            log.error("Error answering callback: ", e);
+        }
+        
+        if (pendingBroadcastMessage == null) {
+            String errorMsg = getLocalizedMessage(user.getLanguage(),
+                "❌ Xatolik: Yuborish uchun xabar topilmadi.",
+                "❌ Хатолик: Юбориш учун хабар топилмади.",
+                "❌ Ошибка: Сообщение для отправки не найдено.");
+            sendMessage(chatId, errorMsg);
+            return;
+        }
+        
+        String sendingMsg = getLocalizedMessage(user.getLanguage(),
+            "📤 Xabar barcha foydalanuvchilarga yuborilmoqda...",
+            "📤 Хабар барча фойдаланувчиларга юборилмоқда...",
+            "📤 Сообщение отправляется всем пользователям...");
+        sendMessage(chatId, sendingMsg);
+        
+        // Async ravishda yuborish
+        Message messageToSend = pendingBroadcastMessage;
+        KuponBot botInstance = this;
+        CompletableFuture.runAsync(() -> {
+            try {
+                BroadcastService.BroadcastResult result = 
+                    broadcastService.sendMediaBroadcast(messageToSend, botInstance);
+                
+                String resultMsg = getLocalizedMessage(user.getLanguage(),
+                    String.format(
+                        "✅ Broadcast yuborildi!\n\n" +
+                        "📊 Natijalar:\n" +
+                        "👥 Jami: %d\n" +
+                        "✅ Muvaffaqiyatli: %d\n" +
+                        "❌ Xatolik: %d\n" +
+                        "📈 Muvaffaqiyat: %.1f%%",
+                        result.getTotalUsers(),
+                        result.getSuccessCount(),
+                        result.getFailureCount(),
+                        result.getSuccessRate()
+                    ),
+                    String.format(
+                        "✅ Broadcast юборилди!\n\n" +
+                        "📊 Натижалар:\n" +
+                        "👥 Жами: %d\n" +
+                        "✅ Муваффақиятли: %d\n" +
+                        "❌ Хатолик: %d\n" +
+                        "📈 Муваффақият: %.1f%%",
+                        result.getTotalUsers(),
+                        result.getSuccessCount(),
+                        result.getFailureCount(),
+                        result.getSuccessRate()
+                    ),
+                    String.format(
+                        "✅ Рассылка отправлена!\n\n" +
+                        "📊 Результаты:\n" +
+                        "👥 Всего: %d\n" +
+                        "✅ Успешно: %d\n" +
+                        "❌ Ошибок: %d\n" +
+                        "📈 Процент успеха: %.1f%%",
+                        result.getTotalUsers(),
+                        result.getSuccessCount(),
+                        result.getFailureCount(),
+                        result.getSuccessRate()
+                    )
+                );
+                
+                sendMessage(chatId, resultMsg);
+                
+            } catch (Exception e) {
+                log.error("Error in media broadcast: ", e);
+                String errorMsg = getLocalizedMessage(user.getLanguage(),
+                    "❌ Xatolik: " + e.getMessage(),
+                    "❌ Хатолик: " + e.getMessage(),
+                    "❌ Ошибка: " + e.getMessage());
+                sendMessage(chatId, errorMsg);
+            }
+        });
+        
+        // Pending message ni tozalash
+        pendingBroadcastMessage = null;
+        pendingBroadcastAdminId = null;
+    }
+    
+    private void handleBroadcastCancellation(CallbackQuery callbackQuery, User user, Long chatId) {
+        try {
+            AnswerCallbackQuery answer = new AnswerCallbackQuery();
+            answer.setCallbackQueryId(callbackQuery.getId());
+            answer.setText("Bekor qilindi");
+            execute(answer);
+        } catch (TelegramApiException e) {
+            log.error("Error answering callback: ", e);
+        }
+        
+        pendingBroadcastMessage = null;
+        pendingBroadcastAdminId = null;
+        
+        String cancelMsg = getLocalizedMessage(user.getLanguage(),
+            "❌ Broadcast bekor qilindi.",
+            "❌ Broadcast бекор қилинди.",
+            "❌ Рассылка отменена.");
+        sendMessage(chatId, cancelMsg);
     }
 }
