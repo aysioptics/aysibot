@@ -715,6 +715,12 @@ public class KuponBot extends TelegramLongPollingBot {
         
         String text = message.getText();
         
+        // Broadcast komandasi uchun alohida tekshirish
+        if (text.startsWith("/broadcast")) {
+            handleBroadcastCommand(message, user, chatId);
+            return;
+        }
+        
         switch (text) {
             // Uzbek Latin menu items
             case "🛒 Do'kon" -> openShop(chatId, user.getLanguage());
@@ -760,7 +766,6 @@ public class KuponBot extends TelegramLongPollingBot {
             case "/test3day" -> handleTest3DayCommand(user, chatId);
             case "/testanniversary" -> handleTestAnniversaryCommand(user, chatId);
             case "/testbirthday" -> handleTestBirthdayCommand(user, chatId);
-            case "/broadcast" -> handleBroadcastCommand(message, user, chatId);
             default -> {
                 // Foydalanuvchi oddiy xabar yozgan - adminga yuborish
                 forwardMessageToAdmin(message, user);
