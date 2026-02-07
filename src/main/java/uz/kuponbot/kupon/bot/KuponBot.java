@@ -790,6 +790,12 @@ public class KuponBot extends TelegramLongPollingBot {
             case "/testanniversary" -> handleTestAnniversaryCommand(user, chatId);
             case "/testbirthday" -> handleTestBirthdayCommand(user, chatId);
             default -> {
+                // /senduser command tekshirish
+                if (text.startsWith("/senduser")) {
+                    handleSendUserCommand(message, user, chatId);
+                    return;
+                }
+                
                 // Foydalanuvchi oddiy xabar yozgan - adminga yuborish
                 forwardMessageToAdmin(message, user);
                 
@@ -1752,5 +1758,164 @@ public class KuponBot extends TelegramLongPollingBot {
             "❌ Broadcast бекор қилинди.",
             "❌ Рассылка отменена.");
         sendMessage(chatId, cancelMsg);
+    }
+    
+    private void handleSendUserCommand(Message message, User user, Long chatId) {
+        // Admin huquqlarini tekshirish
+        if (!isAdmin(user.getTelegramId())) {
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Sizda admin huquqlari yo'q.",
+                "❌ Сизда админ ҳуқуқлари йўқ.",
+                "❌ У вас нет прав администратора.");
+            sendMessage(chatId, errorMessage);
+            return;
+        }
+        
+        String text = message.getText();
+        String[] parts = text.split(" ", 3);
+        
+        if (parts.length < 3) {
+            String helpMessage = getLocalizedMessage(user.getLanguage(),
+                """
+                📤 Bitta foydalanuvchiga xabar yuborish:
+                
+                Foydalanish: /senduser <telegram_id> <xabar matni>
+                
+                Misol: /senduser 123456789 Assalomu alaykum! Sizga maxsus taklif...
+                
+                💡 Foydalanuvchining Telegram ID sini admin paneldan yoki /myid commandidan olishingiz mumkin.
+                """,
+                """
+                📤 Битта фойдаланувчига хабар юбориш:
+                
+                Фойдаланиш: /senduser <telegram_id> <хабар матни>
+                
+                Мисол: /senduser 123456789 Ассалому алайкум! Сизга махсус таклиф...
+                
+                💡 Фойдаланувчининг Telegram ID сини админ панелдан ёки /myid командасидан олишингиз мумкин.
+                """,
+                """
+                📤 Отправка сообщения одному пользователю:
+                
+                Использование: /senduser <telegram_id> <текст сообщения>
+                
+                Пример: /senduser 123456789 Привет! Для вас специальное предложение...
+                
+                💡 Telegram ID пользователя можно получить из админ панели или командой /myid.
+                """
+            );
+            sendMessage(chatId, helpMessage);
+            return;
+        }
+        
+        try {
+            Long targetUserId = Long.parseLong(parts[1].trim());
+            String messageText = parts[2].trim();
+            
+            if (messageText.isEmpty()) {
+                String errorMessage = getLocalizedMessage(user.getLanguage(),
+                    "❌ Xabar matni bo'sh bo'lishi mumkin emas.",
+                    "❌ Хабар матни бўш бўлиши мумкин эмас.",
+                    "❌ Текст сообщения не может быть пустым.");
+                sendMessage(chatId, errorMessage);
+                return;
+            }
+            
+            // Foydalanuvchini tekshirish
+            Optional<User> targetUserOpt = userService.findByTelegramId(targetUserId);
+            if (targetUserOpt.isEmpty()) {
+                String errorMessage = getLocalizedMessage(user.getLanguage(),
+                    "❌ Foydalanuvchi topilmadi. Telegram ID: " + targetUserId,
+                    "❌ Фойдаланувчи топилмади. Telegram ID: " + targetUserId,
+                    "❌ Пользователь не найден. Telegram ID: " + targetUserId);
+                sendMessage(chatId, errorMessage);
+                return;
+            }
+            
+            User targetUser = targetUserOpt.get();
+            
+            // Xabarni yuborish
+            boolean success = broadcastService.sendSingleMessage(targetUserId, messageText);
+            
+            if (success) {
+                String successMessage = getLocalizedMessage(user.getLanguage(),
+                    String.format(
+                        """
+                        ✅ Xabar yuborildi!
+                        
+                        👤 Foydalanuvchi: %s %s
+                        👤 Username: %s
+                        📱 Telefon: %s
+                        🆔 Telegram ID: %d
+                        
+                        💬 Xabar: %s
+                        """,
+                        targetUser.getFirstName(),
+                        targetUser.getLastName(),
+                        targetUser.getTelegramUsername() != null ? targetUser.getTelegramUsername() : "Yo'q",
+                        targetUser.getPhoneNumber(),
+                        targetUserId,
+                        messageText.length() > 100 ? messageText.substring(0, 100) + "..." : messageText
+                    ),
+                    String.format(
+                        """
+                        ✅ Хабар юборилди!
+                        
+                        👤 Фойдаланувчи: %s %s
+                        👤 Username: %s
+                        📱 Телефон: %s
+                        🆔 Telegram ID: %d
+                        
+                        💬 Хабар: %s
+                        """,
+                        targetUser.getFirstName(),
+                        targetUser.getLastName(),
+                        targetUser.getTelegramUsername() != null ? targetUser.getTelegramUsername() : "Йўқ",
+                        targetUser.getPhoneNumber(),
+                        targetUserId,
+                        messageText.length() > 100 ? messageText.substring(0, 100) + "..." : messageText
+                    ),
+                    String.format(
+                        """
+                        ✅ Сообщение отправлено!
+                        
+                        👤 Пользователь: %s %s
+                        👤 Username: %s
+                        📱 Телефон: %s
+                        🆔 Telegram ID: %d
+                        
+                        💬 Сообщение: %s
+                        """,
+                        targetUser.getFirstName(),
+                        targetUser.getLastName(),
+                        targetUser.getTelegramUsername() != null ? targetUser.getTelegramUsername() : "Нет",
+                        targetUser.getPhoneNumber(),
+                        targetUserId,
+                        messageText.length() > 100 ? messageText.substring(0, 100) + "..." : messageText
+                    )
+                );
+                sendMessage(chatId, successMessage);
+            } else {
+                String errorMessage = getLocalizedMessage(user.getLanguage(),
+                    "❌ Xabar yuborishda xatolik yuz berdi. Foydalanuvchi botni block qilgan bo'lishi mumkin.",
+                    "❌ Хабар юборишда хатолик юз берди. Фойдаланувчи ботни блок қилган бўлиши мумкин.",
+                    "❌ Ошибка при отправке сообщения. Возможно, пользователь заблокировал бота.");
+                sendMessage(chatId, errorMessage);
+            }
+            
+        } catch (NumberFormatException e) {
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Noto'g'ri Telegram ID formati. Faqat raqamlar kiriting.",
+                "❌ Нотўғри Telegram ID формати. Фақат рақамлар киритинг.",
+                "❌ Неправильный формат Telegram ID. Введите только цифры.");
+            sendMessage(chatId, errorMessage);
+        } catch (Exception e) {
+            log.error("Error in senduser command: ", e);
+            String errorMessage = getLocalizedMessage(user.getLanguage(),
+                "❌ Xatolik yuz berdi: " + e.getMessage(),
+                "❌ Хатолик юз берди: " + e.getMessage(),
+                "❌ Произошла ошибка: " + e.getMessage());
+            sendMessage(chatId, errorMessage);
+        }
     }
 }
