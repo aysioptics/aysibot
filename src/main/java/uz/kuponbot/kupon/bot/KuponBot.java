@@ -1253,34 +1253,57 @@ public class KuponBot extends TelegramLongPollingBot {
             return;
         }
         
+        // Admin panel URL
+        String adminPanelUrl = "https://aysibot-production.up.railway.app/login.html";
+        
         String adminMessage = getLocalizedMessage(user.getLanguage(),
             "🔐 Admin Panel\n\n" +
             "📊 Tezkor statistika:\n" +
             "👥 Jami foydalanuvchilar: " + userService.getTotalUsersCount() + "\n" +
-            "🎫 Jami kuponlar: " + couponService.getTotalCouponsCount() + "\n\n" +
+            "🎟️ Jami voucherlar: " + voucherService.getTotalVouchersCount() + "\n" +
+            "💰 Keshbek tizimi: Faol\n\n" +
             "Adminlar: @IbodullaR, @developeradmin23\n\n" +
-            "🌐 Admin panelga kirish:\n" +
-            "Brauzerda ochish: http://localhost:8080/login.html\n" +
-            "Admin kodi: ADMIN2024",
+            "🌐 Admin panelga kirish uchun quyidagi tugmani bosing:",
             "🔐 Админ Панел\n\n" +
             "📊 Тезкор статистика:\n" +
             "👥 Жами фойдаланувчилар: " + userService.getTotalUsersCount() + "\n" +
-            "🎫 Жами купонлар: " + couponService.getTotalCouponsCount() + "\n\n" +
+            "🎟️ Жами ваучерлар: " + voucherService.getTotalVouchersCount() + "\n" +
+            "💰 Кешбек тизими: Фаол\n\n" +
             "Админлар: @IbodullaR, @developeradmin23\n\n" +
-            "🌐 Админ панелга кириш:\n" +
-            "Браузерда очиш: http://localhost:8080/login.html\n" +
-            "Админ коди: ADMIN2024",
+            "🌐 Админ панелга кириш учун қуйидаги тугмани босинг:",
             "🔐 Панель администратора\n\n" +
             "📊 Быстрая статистика:\n" +
             "👥 Всего пользователей: " + userService.getTotalUsersCount() + "\n" +
-            "🎫 Всего купонов: " + couponService.getTotalCouponsCount() + "\n\n" +
+            "🎟️ Всего ваучеров: " + voucherService.getTotalVouchersCount() + "\n" +
+            "💰 Система кешбэка: Активна\n\n" +
             "Администраторы: @IbodullaR, @developeradmin23\n\n" +
-            "🌐 Вход в админ панель:\n" +
-            "Открыть в браузере: http://localhost:8080/login.html\n" +
-            "Код администратора: ADMIN2024"
+            "🌐 Для входа в админ панель нажмите кнопку ниже:"
         );
         
-        sendMessage(chatId, adminMessage);
+        // Tugma bilan yuborish
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.toString());
+        message.setText(adminMessage);
+        
+        // Inline keyboard yaratish
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+        
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText("🌐 Admin Panelga kirish");
+        button.setUrl(adminPanelUrl);
+        row.add(button);
+        
+        keyboard.add(row);
+        markup.setKeyboard(keyboard);
+        message.setReplyMarkup(markup);
+        
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error sending admin panel message: ", e);
+        }
     }
     
     private void handleTestNotificationCommand(User user, Long chatId) {
