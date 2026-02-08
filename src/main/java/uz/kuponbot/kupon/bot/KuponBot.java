@@ -32,6 +32,7 @@ import uz.kuponbot.kupon.entity.Coupon;
 import uz.kuponbot.kupon.entity.User;
 import uz.kuponbot.kupon.entity.Voucher;
 import uz.kuponbot.kupon.service.BroadcastService;
+import uz.kuponbot.kupon.service.CashbackService;
 import uz.kuponbot.kupon.service.CouponService;
 import uz.kuponbot.kupon.service.NotificationService;
 import uz.kuponbot.kupon.service.UserService;
@@ -47,6 +48,7 @@ public class KuponBot extends TelegramLongPollingBot {
     private final NotificationService notificationService;
     private final BroadcastService broadcastService;
     private final VoucherService voucherService;
+    private final CashbackService cashbackService;
     
     @Value("${telegram.bot.token}")
     private String botToken;
@@ -819,6 +821,9 @@ public class KuponBot extends TelegramLongPollingBot {
             .filter(v -> v.getStatus() == Voucher.VoucherStatus.USED)
             .count();
         
+        // Keshbek statistikasini olish
+        CashbackService.UserCashbackStats cashbackStats = cashbackService.getUserCashbackStats(user);
+        
         String profileMessage;
         switch (user.getLanguage()) {
             case "uz_cyrl" -> profileMessage = String.format(
@@ -827,8 +832,11 @@ public class KuponBot extends TelegramLongPollingBot {
                 "📝 Фамилия: %s\n" +
                 "📱 Телефон: %s\n" +
                 "👤 Username: %s\n" +
-                "🎂 Туғилган сана: %s\n" +
-                "💰 Кешбек баланси: %s сўм\n" +
+                "🎂 Туғилган сана: %s\n\n" +
+                "💰 Кешбек маълумотлари:\n" +
+                "💳 Жорий баланс: %s сўм\n" +
+                "➕ Жами олинган: %s сўм\n" +
+                "➖ Жами ишлатилган: %s сўм\n\n" +
                 "🎟️ Жами ваучерлар: %d\n" +
                 "✅ Фаол ваучерлар: %d\n" +
                 "✅ Ишлатилган ваучерлар: %d\n" +
@@ -838,7 +846,9 @@ public class KuponBot extends TelegramLongPollingBot {
                 user.getPhoneNumber(),
                 user.getTelegramUsername() != null ? user.getTelegramUsername() : "Username йўқ",
                 user.getBirthDate() != null ? user.getBirthDate() : "Киритилмаган",
-                String.format("%,d", user.getCashbackBalance()),
+                String.format("%,d", cashbackStats.getCurrentBalance()),
+                String.format("%,d", cashbackStats.getTotalEarned()),
+                String.format("%,d", cashbackStats.getTotalUsed()),
                 userVouchers.size(),
                 (int) activeVouchers,
                 (int) usedVouchers,
@@ -850,8 +860,11 @@ public class KuponBot extends TelegramLongPollingBot {
                 "📝 Фамилия: %s\n" +
                 "📱 Телефон: %s\n" +
                 "👤 Username: %s\n" +
-                "🎂 Дата рождения: %s\n" +
-                "💰 Кешбэк баланс: %s сум\n" +
+                "🎂 Дата рождения: %s\n\n" +
+                "💰 Информация о кешбэке:\n" +
+                "💳 Текущий баланс: %s сум\n" +
+                "➕ Всего начислено: %s сум\n" +
+                "➖ Всего использовано: %s сум\n\n" +
                 "🎟️ Всего ваучеров: %d\n" +
                 "✅ Активных ваучеров: %d\n" +
                 "✅ Использованных ваучеров: %d\n" +
@@ -861,7 +874,9 @@ public class KuponBot extends TelegramLongPollingBot {
                 user.getPhoneNumber(),
                 user.getTelegramUsername() != null ? user.getTelegramUsername() : "Username нет",
                 user.getBirthDate() != null ? user.getBirthDate() : "Не указано",
-                String.format("%,d", user.getCashbackBalance()),
+                String.format("%,d", cashbackStats.getCurrentBalance()),
+                String.format("%,d", cashbackStats.getTotalEarned()),
+                String.format("%,d", cashbackStats.getTotalUsed()),
                 userVouchers.size(),
                 (int) activeVouchers,
                 (int) usedVouchers,
@@ -873,8 +888,11 @@ public class KuponBot extends TelegramLongPollingBot {
                 "📝 Familiya: %s\n" +
                 "📱 Telefon: %s\n" +
                 "👤 Username: %s\n" +
-                "🎂 Tug'ilgan sana: %s\n" +
-                "💰 Keshbek balansi: %s so'm\n" +
+                "🎂 Tug'ilgan sana: %s\n\n" +
+                "💰 Keshbek ma'lumotlari:\n" +
+                "💳 Joriy balans: %s so'm\n" +
+                "➕ Jami olingan: %s so'm\n" +
+                "➖ Jami ishlatilgan: %s so'm\n\n" +
                 "🎟️ Jami voucherlar: %d\n" +
                 "✅ Faol voucherlar: %d\n" +
                 "✅ Ishlatilgan voucherlar: %d\n" +
@@ -884,7 +902,9 @@ public class KuponBot extends TelegramLongPollingBot {
                 user.getPhoneNumber(),
                 user.getTelegramUsername() != null ? user.getTelegramUsername() : "Username yo'q",
                 user.getBirthDate() != null ? user.getBirthDate() : "Kiritilmagan",
-                String.format("%,d", user.getCashbackBalance()),
+                String.format("%,d", cashbackStats.getCurrentBalance()),
+                String.format("%,d", cashbackStats.getTotalEarned()),
+                String.format("%,d", cashbackStats.getTotalUsed()),
                 userVouchers.size(),
                 (int) activeVouchers,
                 (int) usedVouchers,

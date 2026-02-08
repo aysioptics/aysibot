@@ -24,6 +24,7 @@ public class CashbackService {
     
     private final CashbackRepository cashbackRepository;
     private final UserRepository userRepository;
+    private final BroadcastService broadcastService;
     private static final Double DEFAULT_CASHBACK_PERCENTAGE = 5.0;
     
     /**
@@ -56,7 +57,62 @@ public class CashbackService {
         
         log.info("Cashback added for user {}: {} so'm ({}%)", telegramId, cashbackAmount, DEFAULT_CASHBACK_PERCENTAGE);
         
+        // Userga notification yuborish
+        sendCashbackNotification(user, purchaseAmount, cashbackAmount);
+        
         return convertToDto(cashback);
+    }
+    
+    /**
+     * Keshbek berilganligi haqida userga xabar yuborish
+     */
+    private void sendCashbackNotification(User user, Integer purchaseAmount, Integer cashbackAmount) {
+        try {
+            String message = formatCashbackMessage(user, purchaseAmount, cashbackAmount);
+            broadcastService.sendSingleMessage(user.getTelegramId(), message);
+            log.info("Cashback notification sent to user {}", user.getTelegramId());
+        } catch (Exception e) {
+            log.error("Error sending cashback notification to user {}: ", user.getTelegramId(), e);
+        }
+    }
+    
+    /**
+     * Keshbek xabarini formatlash (3 tilda)
+     */
+    private String formatCashbackMessage(User user, Integer purchaseAmount, Integer cashbackAmount) {
+        String formattedPurchase = String.format("%,d", purchaseAmount);
+        String formattedCashback = String.format("%,d", cashbackAmount);
+        String formattedTotal = String.format("%,d", user.getCashbackBalance());
+        
+        return switch (user.getLanguage()) {
+            case "uz_cyrl" -> String.format(
+                "🎉 Табриклаймиз!\n\n" +
+                "Сиз Aysi Optikadan амалга оширган %s сўм харидингиз учун миннатдорчилик сифатида сизга кешбек тақдим этилди.\n\n" +
+                "💰 Берилган кешбек: %s сўм\n" +
+                "💳 Жами йиғилган кешбек: %s сўм\n\n" +
+                "Ушбу кешбекдан кейинги харидларингизда кўзойнак, линза ва бошқа оптик маҳсулотлар учун фойдаланишингиз мумкин.\n\n" +
+                "Сизнинг кўз саломатлигингиз биз учун муҳим! 👓✨",
+                formattedPurchase, formattedCashback, formattedTotal
+            );
+            case "ru" -> String.format(
+                "🎉 Поздравляем!\n\n" +
+                "В знак благодарности за вашу покупку в Aysi Optika на сумму %s сум вам начислен кешбэк.\n\n" +
+                "💰 Начислено кешбэка: %s сум\n" +
+                "💳 Всего накоплено кешбэка: %s сум\n\n" +
+                "Вы можете использовать этот кешбэк при следующих покупках очков, линз и других оптических товаров.\n\n" +
+                "Здоровье ваших глаз важно для нас! 👓✨",
+                formattedPurchase, formattedCashback, formattedTotal
+            );
+            default -> String.format(
+                "🎉 Tabriklaymiz!\n\n" +
+                "Siz Aysi Optikadan amalga oshirgan %s so'm xaridingiz uchun minnatdorchilik sifatida sizga keshbek taqdim etildi.\n\n" +
+                "💰 Berilgan keshbek: %s so'm\n" +
+                "💳 Jami yig'ilgan keshbek: %s so'm\n\n" +
+                "Ushbu keshbekdan keyingi xaridlaringizda ko'zoynak, linza va boshqa optik mahsulotlar uchun foydalanishingiz mumkin.\n\n" +
+                "Sizning ko'z salomatligingiz biz uchun muhim! 👓✨",
+                formattedPurchase, formattedCashback, formattedTotal
+            );
+        };
     }
     
     /**
@@ -165,6 +221,19 @@ public class CashbackService {
             .collect(Collectors.toList());
     }
     
+    /**
+     * User uchun keshbek statistikasini olish
+     */
+    public UserCashbackStats getUserCashbackStats(User user) {
+        Integer totalEarned = getTotalEarned(user);
+        Integer totalUsed = getTotalUsed(user);
+        return new UserCashbackStats(
+            user.getCashbackBalance(),
+            totalEarned,
+            totalUsed
+        );
+    }
+    
     private Integer getTotalEarned(User user) {
         return cashbackRepository.findByUserAndStatusOrderByCreatedAtDesc(user, Cashback.CashbackStatus.ACTIVE)
             .stream()
@@ -205,6 +274,14 @@ public class CashbackService {
         private Long telegramId;
         private String fullName;
         private String phoneNumber;
+        private Integer currentBalance;
+        private Integer totalEarned;
+        private Integer totalUsed;
+    }
+    
+    @Data
+    @AllArgsConstructor
+    public static class UserCashbackStats {
         private Integer currentBalance;
         private Integer totalEarned;
         private Integer totalUsed;
