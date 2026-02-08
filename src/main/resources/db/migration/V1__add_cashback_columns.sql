@@ -1,5 +1,20 @@
--- Add cashback_balance column to users table if not exists
-ALTER TABLE users ADD COLUMN IF NOT EXISTS cashback_balance INTEGER DEFAULT 0;
+-- Add cashback_balance column to users table if not exists (allow NULL first)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'cashback_balance'
+    ) THEN
+        ALTER TABLE users ADD COLUMN cashback_balance INTEGER;
+        
+        -- Update existing users to have 0 cashback
+        UPDATE users SET cashback_balance = 0 WHERE cashback_balance IS NULL;
+        
+        -- Now make it NOT NULL with default
+        ALTER TABLE users ALTER COLUMN cashback_balance SET NOT NULL;
+        ALTER TABLE users ALTER COLUMN cashback_balance SET DEFAULT 0;
+    END IF;
+END $$;
 
 -- Create cashbacks table if not exists
 CREATE TABLE IF NOT EXISTS cashbacks (
