@@ -78,7 +78,7 @@ public class User {
     @Column(name = "language", nullable = true)
     private String language = "uz"; // "uz" (lotin), "ru" (rus), "uz_cyrl" (kiril)
     
-    @Column(nullable = false)
+    @Column(name = "cashback_balance", columnDefinition = "INTEGER DEFAULT 0")
     private Integer cashbackBalance = 0; // Keshbek balansi (so'm)
     
     @Enumerated(EnumType.STRING)
