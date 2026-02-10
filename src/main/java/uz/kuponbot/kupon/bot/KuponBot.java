@@ -185,7 +185,11 @@ public class KuponBot extends TelegramLongPollingBot {
         sendMessage.setText(welcomeText);
         sendMessage.setReplyMarkup(createLanguageKeyboard());
         
-        sendMessage(sendMessage);
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error("Error sending welcome message: ", e);
+        }
     }
     
     private ReplyKeyboardMarkup createLanguageKeyboard() {
