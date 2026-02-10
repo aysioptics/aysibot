@@ -35,19 +35,19 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("✅ Admin 1 (Ibodulla Raxmonberganov) created successfully!");
         }
         
-        // Admin 2: Cristiano Ronaldo
-        if (userService.findByTelegramId(7543576887L).isEmpty()) {
+        // Admin 2: Aysi Manager
+        if (userService.findByTelegramId(6051364132L).isEmpty()) {
             User admin2 = new User();
-            admin2.setTelegramId(7543576887L);
-            admin2.setFirstName("Cristiano");
-            admin2.setLastName("Ronaldo");
-            admin2.setTelegramUsername("@developeradmin23");
-            admin2.setPhoneNumber("+998909876543");
-            admin2.setBirthDate("11.11.2001");
+            admin2.setTelegramId(6051364132L);
+            admin2.setFirstName("Aysi");
+            admin2.setLastName("Manager");
+            admin2.setTelegramUsername("@aysi_menejer");
+            admin2.setPhoneNumber("+998938740305");
+            admin2.setBirthDate("01.01.2000");
             admin2.setState(User.UserState.REGISTERED);
             
             userService.save(admin2);
-            System.out.println("✅ Admin 2 (Cristiano Ronaldo) created successfully!");
+            System.out.println("✅ Admin 2 (Aysi Manager) created successfully!");
         }
     }
 }

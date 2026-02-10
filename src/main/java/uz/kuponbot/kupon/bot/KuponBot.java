@@ -1197,8 +1197,8 @@ public class KuponBot extends TelegramLongPollingBot {
             new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
         shopButton.setText(buttonText);
         
-        // Production Vercel HTTPS domain
-        shopButton.setUrl("https://aysi-optics.vercel.app/shop.html");
+        // Production Hetzner HTTPS domain
+        shopButton.setUrl("https://aysioptics.uz/shop.html");
         
         row.add(shopButton);
         keyboard.add(row);
@@ -1254,7 +1254,7 @@ public class KuponBot extends TelegramLongPollingBot {
         }
         
         // Admin panel URL
-        String adminPanelUrl = "https://aysibot-production.up.railway.app/login.html";
+        String adminPanelUrl = "https://aysioptics.uz/login.html";
         
         String adminMessage = getLocalizedMessage(user.getLanguage(),
             "🔐 Admin Panel\n\n" +
@@ -1262,21 +1262,21 @@ public class KuponBot extends TelegramLongPollingBot {
             "👥 Jami foydalanuvchilar: " + userService.getTotalUsersCount() + "\n" +
             "🎟️ Jami voucherlar: " + voucherService.getTotalVouchersCount() + "\n" +
             "💰 Keshbek tizimi: Faol\n\n" +
-            "Adminlar: @IbodullaR, @developeradmin23\n\n" +
+            "Adminlar: @IbodullaR, @aysi_menejer\n\n" +
             "🌐 Admin panelga kirish uchun quyidagi tugmani bosing:",
             "🔐 Админ Панел\n\n" +
             "📊 Тезкор статистика:\n" +
             "👥 Жами фойдаланувчилар: " + userService.getTotalUsersCount() + "\n" +
             "🎟️ Жами ваучерлар: " + voucherService.getTotalVouchersCount() + "\n" +
             "💰 Кешбек тизими: Фаол\n\n" +
-            "Админлар: @IbodullaR, @developeradmin23\n\n" +
+            "Админлар: @IbodullaR, @aysi_menejer\n\n" +
             "🌐 Админ панелга кириш учун қуйидаги тугмани босинг:",
             "🔐 Панель администратора\n\n" +
             "📊 Быстрая статистика:\n" +
             "👥 Всего пользователей: " + userService.getTotalUsersCount() + "\n" +
             "🎟️ Всего ваучеров: " + voucherService.getTotalVouchersCount() + "\n" +
             "💰 Система кешбэка: Активна\n\n" +
-            "Администраторы: @IbodullaR, @developeradmin23\n\n" +
+            "Администраторы: @IbodullaR, @aysi_menejer\n\n" +
             "🌐 Для входа в админ панель нажмите кнопку ниже:"
         );
         
