@@ -1234,7 +1234,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void handleAdminCommand(User user, Long chatId) {
         // Admin Telegram ID'larini tekshirish
-        Long[] adminTelegramIds = {1807166165L, 7543576887L}; // IbodullaR va DeveloperAdmin23
+        Long[] adminTelegramIds = {1807166165L, 6051364132L}; // IbodullaR va aysi_menejer
         
         boolean isAdmin = false;
         for (Long adminId : adminTelegramIds) {
@@ -1308,7 +1308,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void handleTestNotificationCommand(User user, Long chatId) {
         // Admin huquqlarini tekshirish
-        Long[] adminTelegramIds = {1807166165L, 7543576887L};
+        Long[] adminTelegramIds = {1807166165L, 6051364132L};
         
         boolean isAdmin = false;
         for (Long adminId : adminTelegramIds) {
@@ -1338,7 +1338,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void handleTest3DayCommand(User user, Long chatId) {
         // Admin huquqlarini tekshirish
-        Long[] adminTelegramIds = {1807166165L, 7543576887L};
+        Long[] adminTelegramIds = {1807166165L, 6051364132L};
         
         boolean isAdmin = false;
         for (Long adminId : adminTelegramIds) {
@@ -1368,7 +1368,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void handleTestAnniversaryCommand(User user, Long chatId) {
         // Admin huquqlarini tekshirish
-        Long[] adminTelegramIds = {1807166165L, 7543576887L};
+        Long[] adminTelegramIds = {1807166165L, 6051364132L};
         
         boolean isAdmin = false;
         for (Long adminId : adminTelegramIds) {
@@ -1398,7 +1398,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void handleTestBirthdayCommand(User user, Long chatId) {
         // Admin huquqlarini tekshirish
-        Long[] adminTelegramIds = {1807166165L, 7543576887L};
+        Long[] adminTelegramIds = {1807166165L, 6051364132L};
         
         boolean isAdmin = false;
         for (Long adminId : adminTelegramIds) {
@@ -1428,7 +1428,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void handleBroadcastCommand(Message message, User user, Long chatId) {
         // Admin huquqlarini tekshirish
-        Long[] adminTelegramIds = {1807166165L, 7543576887L};
+        Long[] adminTelegramIds = {1807166165L, 6051364132L};
         
         boolean isAdmin = false;
         for (Long adminId : adminTelegramIds) {
@@ -1569,7 +1569,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void forwardMessageToAdmin(Message message, User user) {
         // Admin ID'larini olish
-        String[] adminIds = {"1807166165", "7543576887"}; // Admin 1 va Admin 2
+        String[] adminIds = {"1807166165", "6051364132"}; // Admin 1 va Admin 2
         
         String userInfo = String.format(
             "📩 Yangi xabar foydalanuvchidan:\n\n" +
@@ -1600,7 +1600,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void notifyAdminAboutHelpRequest(User user) {
         // Admin ID'larini olish
-        String[] adminIds = {"1807166165", "7543576887"}; // Admin 1 va Admin 2
+        String[] adminIds = {"1807166165", "6051364132"}; // Admin 1 va Admin 2
         
         String notification = String.format(
             "ℹ️ Yordam so'raldi!\n\n" +
@@ -1648,7 +1648,7 @@ public class KuponBot extends TelegramLongPollingBot {
     // ========== VIDEO/RASM BROADCAST METODLARI ==========
     
     private boolean isAdmin(Long userId) {
-        Long[] adminTelegramIds = {1807166165L, 7543576887L};
+        Long[] adminTelegramIds = {1807166165L, 6051364132L};
         for (Long adminId : adminTelegramIds) {
             if (userId.equals(adminId)) {
                 return true;
@@ -1968,3 +1968,5 @@ public class KuponBot extends TelegramLongPollingBot {
         }
     }
 }
+
+
