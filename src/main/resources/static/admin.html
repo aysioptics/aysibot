@@ -834,42 +834,6 @@
             };
         }
         
-        // Toggle between URL and file input
-        function toggleImageInput() {
-            const imageType = document.querySelector('input[name="imageType"]:checked').value;
-            const urlInput = document.getElementById('productImageUrl');
-            const fileInput = document.getElementById('productImageFile');
-            const preview = document.getElementById('imagePreview');
-            
-            if (imageType === 'url') {
-                urlInput.style.display = 'block';
-                fileInput.style.display = 'none';
-                preview.style.display = 'none';
-            } else {
-                urlInput.style.display = 'none';
-                fileInput.style.display = 'block';
-                preview.style.display = 'none';
-            }
-        }
-        
-        // Preview image when file is selected
-        document.addEventListener('DOMContentLoaded', function() {
-            const fileInput = document.getElementById('productImageFile');
-            if (fileInput) {
-                fileInput.addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            document.getElementById('previewImg').src = e.target.result;
-                            document.getElementById('imagePreview').style.display = 'block';
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
-            }
-        });
-        
         // Add product
         async function addProduct() {
             const name = document.getElementById('productName').value;
