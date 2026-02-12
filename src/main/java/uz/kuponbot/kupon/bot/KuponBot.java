@@ -578,6 +578,17 @@ public class KuponBot extends TelegramLongPollingBot {
             return;
         }
         
+        // Appointment confirmation callbacks
+        if (callbackData.equals("confirm_appointment")) {
+            handleAppointmentConfirmation(callbackQuery, user, chatId);
+            return;
+        }
+        
+        if (callbackData.equals("cancel_appointment")) {
+            handleAppointmentCancellation(callbackQuery, user, chatId);
+            return;
+        }
+        
         if ("check_subscription".equals(callbackData) && user.getState() == User.UserState.WAITING_CHANNEL_SUBSCRIPTION) {
             // Answer the callback query first
             try {
@@ -698,6 +709,7 @@ public class KuponBot extends TelegramLongPollingBot {
         KeyboardRow row1 = new KeyboardRow();
         KeyboardRow row2 = new KeyboardRow();
         KeyboardRow row3 = new KeyboardRow();
+        KeyboardRow row4 = new KeyboardRow();
         
         switch (language) {
             case "uz_cyrl" -> {
@@ -707,7 +719,9 @@ public class KuponBot extends TelegramLongPollingBot {
                 row2.add("💬 Фикр билдириш");
                 row2.add("📋 Сўровномада қатнашиш");
                 
-                row3.add("ℹ️ Ёрдам");
+                row3.add("📅 Қабулга ёзилиш");
+                
+                row4.add("ℹ️ Ёрдам");
             }
             case "ru" -> {
                 row1.add("🛒 Магазин");
@@ -716,7 +730,9 @@ public class KuponBot extends TelegramLongPollingBot {
                 row2.add("💬 Оставить отзыв");
                 row2.add("📋 Участвовать в опросе");
                 
-                row3.add("ℹ️ Помощь");
+                row3.add("📅 Записаться на прием");
+                
+                row4.add("ℹ️ Помощь");
             }
             default -> {
                 row1.add("🛒 Do'kon");
@@ -725,13 +741,16 @@ public class KuponBot extends TelegramLongPollingBot {
                 row2.add("💬 Fikr bildirish");
                 row2.add("📋 So'rovnomada qatnashish");
                 
-                row3.add("ℹ️ Yordam");
+                row3.add("📅 Qabulga yozilish");
+                
+                row4.add("ℹ️ Yordam");
             }
         }
         
         keyboard.add(row1);
         keyboard.add(row2);
         keyboard.add(row3);
+        keyboard.add(row4);
         keyboardMarkup.setKeyboard(keyboard);
         
         return keyboardMarkup;
@@ -756,6 +775,7 @@ public class KuponBot extends TelegramLongPollingBot {
             case "👤 Profil" -> showUserProfile(user, chatId);
             case "💬 Fikr bildirish" -> showReviewRequest(chatId, user.getLanguage());
             case "📋 So'rovnomada qatnashish" -> showSurveyRequest(chatId, user.getLanguage());
+            case "📅 Qabulga yozilish" -> showAppointmentRequest(chatId, user.getLanguage());
             case "ℹ️ Yordam" -> {
                 showHelp(chatId, user.getLanguage());
                 notifyAdminAboutHelpRequest(user);
@@ -766,6 +786,7 @@ public class KuponBot extends TelegramLongPollingBot {
             case "👤 Профил" -> showUserProfile(user, chatId);
             case "💬 Фикр билдириш" -> showReviewRequest(chatId, user.getLanguage());
             case "📋 Сўровномада қатнашиш" -> showSurveyRequest(chatId, user.getLanguage());
+            case "📅 Қабулга ёзилиш" -> showAppointmentRequest(chatId, user.getLanguage());
             case "ℹ️ Ёрдам" -> {
                 showHelp(chatId, user.getLanguage());
                 notifyAdminAboutHelpRequest(user);
@@ -776,6 +797,7 @@ public class KuponBot extends TelegramLongPollingBot {
             case "👤 Профиль" -> showUserProfile(user, chatId);
             case "💬 Оставить отзыв" -> showReviewRequest(chatId, user.getLanguage());
             case "📋 Участвовать в опросе" -> showSurveyRequest(chatId, user.getLanguage());
+            case "📅 Записаться на прием" -> showAppointmentRequest(chatId, user.getLanguage());
             case "ℹ️ Помощь" -> {
                 showHelp(chatId, user.getLanguage());
                 notifyAdminAboutHelpRequest(user);
@@ -1971,6 +1993,174 @@ public class KuponBot extends TelegramLongPollingBot {
             sendMessage(chatId, errorMessage);
         }
     }
+    
+    // ========== QABULGA YOZILISH METODLARI ==========
+    
+    private void showAppointmentRequest(Long chatId, String language) {
+        String message = getLocalizedMessage(language,
+            """
+            📅 Qabulga yozilish
+            
+            Haqiqatdan qabulga yozilmoqchimisiz?
+            
+            Agar yozilmoqchi bo'lsangiz, "Ha" tugmasini bosing va menejer siz bilan bog'lanadi.
+            """,
+            """
+            📅 Қабулга ёзилиш
+            
+            Ҳақиқатдан қабулга ёзилмоқчимисиз?
+            
+            Агар ёзилмоқчи бўлсангиз, "Ҳа" тугмасини босинг ва менежер сиз билан боғланади.
+            """,
+            """
+            📅 Запись на прием
+            
+            Вы действительно хотите записаться на прием?
+            
+            Если хотите записаться, нажмите кнопку "Да" и менеджер свяжется с вами.
+            """
+        );
+        
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
+        sendMessage.setText(message);
+        sendMessage.setReplyMarkup(createAppointmentConfirmationKeyboard(language));
+        
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error("Error sending appointment request: ", e);
+        }
+    }
+    
+    private InlineKeyboardMarkup createAppointmentConfirmationKeyboard(String language) {
+        InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+        
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        
+        InlineKeyboardButton confirmButton = new InlineKeyboardButton();
+        InlineKeyboardButton cancelButton = new InlineKeyboardButton();
+        
+        switch (language) {
+            case "uz_cyrl" -> {
+                confirmButton.setText("✅ Ҳа");
+                cancelButton.setText("❌ Йўқ");
+            }
+            case "ru" -> {
+                confirmButton.setText("✅ Да");
+                cancelButton.setText("❌ Нет");
+            }
+            default -> {
+                confirmButton.setText("✅ Ha");
+                cancelButton.setText("❌ Yo'q");
+            }
+        }
+        
+        confirmButton.setCallbackData("confirm_appointment");
+        cancelButton.setCallbackData("cancel_appointment");
+        
+        row.add(confirmButton);
+        row.add(cancelButton);
+        keyboard.add(row);
+        inlineKeyboard.setKeyboard(keyboard);
+        
+        return inlineKeyboard;
+    }
+    
+    private void handleAppointmentConfirmation(CallbackQuery callbackQuery, User user, Long chatId) {
+        // Answer callback query
+        try {
+            AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery();
+            answerCallbackQuery.setCallbackQueryId(callbackQuery.getId());
+            answerCallbackQuery.setText("✅");
+            answerCallbackQuery.setShowAlert(false);
+            execute(answerCallbackQuery);
+        } catch (TelegramApiException e) {
+            log.error("Error answering callback query: ", e);
+        }
+        
+        // Foydalanuvchiga tasdiq xabari
+        String confirmMessage = getLocalizedMessage(user.getLanguage(),
+            """
+            ✅ Sizning ma'lumotlaringiz menejerga muvaffaqiyatli yuborildi!
+            
+            Tez orada menejer siz bilan bog'lanadi.
+            """,
+            """
+            ✅ Сизнинг маълумотларингиз менежерга муваффақиятли юборилди!
+            
+            Тез орада менежер сиз билан боғланади.
+            """,
+            """
+            ✅ Ваши данные успешно отправлены менеджеру!
+            
+            Скоро менеджер свяжется с вами.
+            """
+        );
+        
+        sendMessage(chatId, confirmMessage);
+        
+        // Adminlarga xabar yuborish
+        notifyAdminsAboutAppointment(user);
+    }
+    
+    private void handleAppointmentCancellation(CallbackQuery callbackQuery, User user, Long chatId) {
+        // Answer callback query
+        try {
+            AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery();
+            answerCallbackQuery.setCallbackQueryId(callbackQuery.getId());
+            answerCallbackQuery.setText("❌");
+            answerCallbackQuery.setShowAlert(false);
+            execute(answerCallbackQuery);
+        } catch (TelegramApiException e) {
+            log.error("Error answering callback query: ", e);
+        }
+        
+        String cancelMessage = getLocalizedMessage(user.getLanguage(),
+            "❌ Qabulga yozilish bekor qilindi.",
+            "❌ Қабулга ёзилиш бекор қилинди.",
+            "❌ Запись на прием отменена."
+        );
+        
+        sendMessage(chatId, cancelMessage);
+    }
+    
+    private void notifyAdminsAboutAppointment(User user) {
+        String[] adminIds = {"1807166165", "6051364132"};
+        
+        String notification = String.format(
+            """
+            📅 YANGI QABULGA YOZILISH!
+            
+            👤 Ism-Familiya: %s %s
+            📱 Telefon: %s
+            👤 Username: %s
+            🆔 Telegram ID: %d
+            🎂 Tug'ilgan sana: %s
+            
+            ⚠️ Ushbu foydalanuvchi qabulga yozilish xizmatidan foydalandi.
+            Iltimos, tez orada bog'laning!
+            """,
+            user.getFirstName(),
+            user.getLastName(),
+            user.getPhoneNumber(),
+            user.getTelegramUsername() != null ? user.getTelegramUsername() : "Yo'q",
+            user.getTelegramId(),
+            user.getBirthDate()
+        );
+        
+        for (String adminId : adminIds) {
+            try {
+                SendMessage sendMessage = new SendMessage();
+                sendMessage.setChatId(adminId);
+                sendMessage.setText(notification);
+                execute(sendMessage);
+                log.info("Appointment notification sent to admin: {}", adminId);
+            } catch (TelegramApiException e) {
+                log.error("Error sending appointment notification to admin {}: ", adminId, e);
+            }
+        }
+    }
+
 }
-
-
