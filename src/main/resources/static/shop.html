@@ -361,11 +361,11 @@
                             `).join('')}
                         </div>
                         ${imageUrls.length > 1 ? `
-                            <button class="slider-arrow left" onclick="window.slideProductImage('${sliderId}', -1); return false;">‹</button>
-                            <button class="slider-arrow right" onclick="window.slideProductImage('${sliderId}', 1); return false;">›</button>
+                            <button class="slider-arrow left" data-slider="${sliderId}" data-direction="-1">‹</button>
+                            <button class="slider-arrow right" data-slider="${sliderId}" data-direction="1">›</button>
                             <div class="slider-dots">
                                 ${imageUrls.map((_, index) => `
-                                    <div class="slider-dot ${index === 0 ? 'active' : ''}" onclick="window.goToProductSlide('${sliderId}', ${index}); return false;"></div>
+                                    <div class="slider-dot ${index === 0 ? 'active' : ''}" data-slider="${sliderId}" data-index="${index}"></div>
                                 `).join('')}
                             </div>
                         ` : ''}
@@ -391,6 +391,7 @@
             if (hasImages && imageUrls.length > 1) {
                 setTimeout(() => {
                     initSlider(sliderId, imageUrls.length);
+                    attachSliderEvents(sliderId);
                 }, 0);
             }
             
@@ -407,22 +408,52 @@
             };
         }
         
+        function attachSliderEvents(sliderId) {
+            const slider = document.getElementById(sliderId);
+            if (!slider) return;
+            
+            // Attach arrow button events
+            const arrows = slider.querySelectorAll('.slider-arrow');
+            arrows.forEach(arrow => {
+                arrow.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const direction = parseInt(this.getAttribute('data-direction'));
+                    slideProductImage(sliderId, direction);
+                });
+            });
+            
+            // Attach dot events
+            const dots = slider.querySelectorAll('.slider-dot');
+            dots.forEach(dot => {
+                dot.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const index = parseInt(this.getAttribute('data-index'));
+                    goToProductSlide(sliderId, index);
+                });
+            });
+        }
+        
         // Global functions for inline onclick
-        window.slideProductImage = function(sliderId, direction) {
+        window.slideProductImage = slideProductImage;
+        window.goToProductSlide = goToProductSlide;
+        
+        function slideProductImage(sliderId, direction) {
             const state = sliderStates[sliderId];
             if (!state) return;
             
             state.currentIndex = (state.currentIndex + direction + state.imageCount) % state.imageCount;
             updateSlider(sliderId);
-        };
+        }
         
-        window.goToProductSlide = function(sliderId, index) {
+        function goToProductSlide(sliderId, index) {
             const state = sliderStates[sliderId];
             if (!state) return;
             
             state.currentIndex = index;
             updateSlider(sliderId);
-        };
+        }
         
         function updateSlider(sliderId) {
             const state = sliderStates[sliderId];
