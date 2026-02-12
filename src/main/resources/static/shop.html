@@ -66,36 +66,55 @@
             background: #f0f0f0;
         }
         
-        .image-slider {
+        .gallery-image {
             width: 100%;
             height: 100%;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .slider-track {
-            display: flex;
-            transition: transform 0.3s ease;
-            height: 100%;
-        }
-        
-        .slider-image {
-            min-width: 100%;
-            height: 100%;
             object-fit: cover;
+            display: block;
         }
         
-        .slider-dots {
+        .nav-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: background 0.3s;
+        }
+        
+        .nav-button:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        .prev-button {
+            left: 10px;
+        }
+        
+        .next-button {
+            right: 10px;
+        }
+        
+        .image-dots {
             position: absolute;
             bottom: 10px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 5px;
+            gap: 6px;
             z-index: 10;
         }
         
-        .slider-dot {
+        .image-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
@@ -104,39 +123,22 @@
             transition: background 0.3s;
         }
         
-        .slider-dot.active {
+        .image-dot.active {
             background: white;
+            width: 20px;
+            border-radius: 4px;
         }
         
-        .slider-arrow {
+        .image-counter {
             position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            border: none;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            transition: background 0.3s;
-        }
-        
-        .slider-arrow:hover {
-            background: rgba(0, 0, 0, 0.7);
-        }
-        
-        .slider-arrow.left {
-            left: 10px;
-        }
-        
-        .slider-arrow.right {
+            top: 10px;
             right: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            z-index: 10;
         }
         
         .no-image {
@@ -349,36 +351,33 @@
             const imageUrls = product.imageUrls || [];
             const hasImages = imageUrls.length > 0;
             
-            // Image slider HTML
+            // Image gallery HTML
             let imageHTML = '';
             if (hasImages) {
-                const sliderId = `slider-${product.id}`;
+                const galleryId = `gallery-${product.id}`;
                 imageHTML = `
-                    <div class="image-slider" id="${sliderId}" data-image-count="${imageUrls.length}">
-                        <div class="slider-track">
-                            ${imageUrls.map(url => `
-                                <img src="${url}" alt="${product.name}" class="slider-image">
-                            `).join('')}
-                        </div>
+                    <div class="product-image" id="${galleryId}">
+                        <img class="gallery-image" src="${imageUrls[0]}" alt="${product.name}">
                         ${imageUrls.length > 1 ? `
-                            <button class="slider-arrow left" data-slider="${sliderId}" data-direction="-1">‹</button>
-                            <button class="slider-arrow right" data-slider="${sliderId}" data-direction="1">›</button>
-                            <div class="slider-dots">
+                            <button class="nav-button prev-button" onclick="previousImage('${galleryId}')">‹</button>
+                            <button class="nav-button next-button" onclick="nextImage('${galleryId}')">›</button>
+                            <div class="image-counter">
+                                <span class="current-index">1</span> / ${imageUrls.length}
+                            </div>
+                            <div class="image-dots">
                                 ${imageUrls.map((_, index) => `
-                                    <div class="slider-dot ${index === 0 ? 'active' : ''}" data-slider="${sliderId}" data-index="${index}"></div>
+                                    <div class="image-dot ${index === 0 ? 'active' : ''}" onclick="goToImage('${galleryId}', ${index})"></div>
                                 `).join('')}
                             </div>
                         ` : ''}
                     </div>
                 `;
             } else {
-                imageHTML = '<div class="no-image">👓</div>';
+                imageHTML = '<div class="product-image"><div class="no-image">👓</div></div>';
             }
             
             card.innerHTML = `
-                <div class="product-image">
-                    ${imageHTML}
-                </div>
+                ${imageHTML}
                 <div class="product-name">${product.name}</div>
                 <div class="product-description">${product.description || ''}</div>
                 <div class="product-price">${formatPrice(product.price)} so'm</div>
@@ -387,90 +386,64 @@
                 </div>
             `;
             
-            // Initialize slider after card is added to DOM
+            // Initialize gallery
             if (hasImages && imageUrls.length > 1) {
-                setTimeout(() => {
-                    initSlider(sliderId, imageUrls.length);
-                    attachSliderEvents(sliderId);
-                }, 0);
+                window.galleries = window.galleries || {};
+                window.galleries[galleryId] = {
+                    images: imageUrls,
+                    currentIndex: 0
+                };
             }
             
             return card;
         }
         
-        // Slider state management
-        const sliderStates = {};
+        // Gallery navigation functions
+        window.nextImage = function(galleryId) {
+            const gallery = window.galleries[galleryId];
+            if (!gallery) return;
+            
+            gallery.currentIndex = (gallery.currentIndex + 1) % gallery.images.length;
+            updateGallery(galleryId);
+        };
         
-        function initSlider(sliderId, imageCount) {
-            sliderStates[sliderId] = {
-                currentIndex: 0,
-                imageCount: imageCount
-            };
-        }
+        window.previousImage = function(galleryId) {
+            const gallery = window.galleries[galleryId];
+            if (!gallery) return;
+            
+            gallery.currentIndex = (gallery.currentIndex - 1 + gallery.images.length) % gallery.images.length;
+            updateGallery(galleryId);
+        };
         
-        function attachSliderEvents(sliderId) {
-            const slider = document.getElementById(sliderId);
-            if (!slider) return;
+        window.goToImage = function(galleryId, index) {
+            const gallery = window.galleries[galleryId];
+            if (!gallery) return;
             
-            // Attach arrow button events
-            const arrows = slider.querySelectorAll('.slider-arrow');
-            arrows.forEach(arrow => {
-                arrow.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const direction = parseInt(this.getAttribute('data-direction'));
-                    slideProductImage(sliderId, direction);
-                });
-            });
-            
-            // Attach dot events
-            const dots = slider.querySelectorAll('.slider-dot');
-            dots.forEach(dot => {
-                dot.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const index = parseInt(this.getAttribute('data-index'));
-                    goToProductSlide(sliderId, index);
-                });
-            });
-        }
+            gallery.currentIndex = index;
+            updateGallery(galleryId);
+        };
         
-        // Global functions for inline onclick
-        window.slideProductImage = slideProductImage;
-        window.goToProductSlide = goToProductSlide;
-        
-        function slideProductImage(sliderId, direction) {
-            const state = sliderStates[sliderId];
-            if (!state) return;
+        function updateGallery(galleryId) {
+            const gallery = window.galleries[galleryId];
+            if (!gallery) return;
             
-            state.currentIndex = (state.currentIndex + direction + state.imageCount) % state.imageCount;
-            updateSlider(sliderId);
-        }
-        
-        function goToProductSlide(sliderId, index) {
-            const state = sliderStates[sliderId];
-            if (!state) return;
+            const container = document.getElementById(galleryId);
+            if (!container) return;
             
-            state.currentIndex = index;
-            updateSlider(sliderId);
-        }
-        
-        function updateSlider(sliderId) {
-            const state = sliderStates[sliderId];
-            if (!state) return;
+            const img = container.querySelector('.gallery-image');
+            const counter = container.querySelector('.current-index');
+            const dots = container.querySelectorAll('.image-dot');
             
-            const slider = document.getElementById(sliderId);
-            if (!slider) return;
+            if (img) {
+                img.src = gallery.images[gallery.currentIndex];
+            }
             
-            const track = slider.querySelector('.slider-track');
-            const dots = slider.querySelectorAll('.slider-dot');
-            
-            if (track) {
-                track.style.transform = `translateX(-${state.currentIndex * 100}%)`;
+            if (counter) {
+                counter.textContent = gallery.currentIndex + 1;
             }
             
             dots.forEach((dot, index) => {
-                dot.classList.toggle('active', index === state.currentIndex);
+                dot.classList.toggle('active', index === gallery.currentIndex);
             });
         }
         
