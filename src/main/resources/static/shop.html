@@ -361,11 +361,11 @@
                             `).join('')}
                         </div>
                         ${imageUrls.length > 1 ? `
-                            <button class="slider-arrow left" data-slider="${sliderId}" data-direction="-1">‹</button>
-                            <button class="slider-arrow right" data-slider="${sliderId}" data-direction="1">›</button>
-                            <div class="slider-dots" data-slider="${sliderId}">
+                            <button class="slider-arrow left" onclick="window.slideProductImage('${sliderId}', -1); return false;">‹</button>
+                            <button class="slider-arrow right" onclick="window.slideProductImage('${sliderId}', 1); return false;">›</button>
+                            <div class="slider-dots">
                                 ${imageUrls.map((_, index) => `
-                                    <div class="slider-dot ${index === 0 ? 'active' : ''}" data-index="${index}"></div>
+                                    <div class="slider-dot ${index === 0 ? 'active' : ''}" onclick="window.goToProductSlide('${sliderId}', ${index}); return false;"></div>
                                 `).join('')}
                             </div>
                         ` : ''}
@@ -405,95 +405,24 @@
                 currentIndex: 0,
                 imageCount: imageCount
             };
-            
-            // Add event listeners to arrows
-            const slider = document.getElementById(sliderId);
-            if (!slider) return;
-            
-            const leftArrow = slider.querySelector('.slider-arrow.left');
-            const rightArrow = slider.querySelector('.slider-arrow.right');
-            const dotsContainer = slider.querySelector('.slider-dots');
-            
-            if (leftArrow) {
-                leftArrow.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    slideImage(sliderId, -1);
-                });
-            }
-            
-            if (rightArrow) {
-                rightArrow.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    slideImage(sliderId, 1);
-                });
-            }
-            
-            if (dotsContainer) {
-                const dots = dotsContainer.querySelectorAll('.slider-dot');
-                dots.forEach((dot, index) => {
-                    dot.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        goToSlide(sliderId, index);
-                    });
-                });
-            }
-            
-            // Touch support for mobile
-            let touchStartX = 0;
-            let touchEndX = 0;
-            
-            const track = slider.querySelector('.slider-track');
-            if (track) {
-                track.addEventListener('touchstart', function(e) {
-                    touchStartX = e.changedTouches[0].screenX;
-                }, { passive: true });
-                
-                track.addEventListener('touchend', function(e) {
-                    touchEndX = e.changedTouches[0].screenX;
-                    handleSwipe(sliderId);
-                }, { passive: true });
-            }
-            
-            function handleSwipe(sliderId) {
-                const swipeThreshold = 50;
-                const diff = touchStartX - touchEndX;
-                
-                if (Math.abs(diff) > swipeThreshold) {
-                    if (diff > 0) {
-                        // Swipe left - next image
-                        slideImage(sliderId, 1);
-                    } else {
-                        // Swipe right - previous image
-                        slideImage(sliderId, -1);
-                    }
-                }
-            }
         }
         
-        function slideImage(sliderId, direction) {
+        // Global functions for inline onclick
+        window.slideProductImage = function(sliderId, direction) {
             const state = sliderStates[sliderId];
-            if (!state) {
-                console.error('Slider state not found:', sliderId);
-                return;
-            }
+            if (!state) return;
             
             state.currentIndex = (state.currentIndex + direction + state.imageCount) % state.imageCount;
             updateSlider(sliderId);
-        }
+        };
         
-        function goToSlide(sliderId, index) {
+        window.goToProductSlide = function(sliderId, index) {
             const state = sliderStates[sliderId];
-            if (!state) {
-                console.error('Slider state not found:', sliderId);
-                return;
-            }
+            if (!state) return;
             
             state.currentIndex = index;
             updateSlider(sliderId);
-        }
+        };
         
         function updateSlider(sliderId) {
             const state = sliderStates[sliderId];
