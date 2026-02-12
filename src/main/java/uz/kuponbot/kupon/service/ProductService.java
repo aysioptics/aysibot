@@ -33,12 +33,12 @@ public class ProductService {
         return productRepository.save(product);
     }
     
-    public Product createProduct(String name, String description, String price, String imageUrl, Integer stockQuantity) {
+    public Product createProduct(String name, String description, String price, List<String> imageUrls, Integer stockQuantity) {
         Product product = new Product();
         product.setName(name);
         product.setDescription(description);
         product.setPrice(new java.math.BigDecimal(price));
-        product.setImageUrl(imageUrl);
+        product.setImageUrlsList(imageUrls); // Ko'p rasmlar
         product.setStockQuantity(stockQuantity);
         product.setStatus(Product.ProductStatus.ACTIVE);
         

@@ -106,13 +106,14 @@ public class AdminController {
         log.info("Description: {}", request.getDescription());
         log.info("Price: {}", request.getPrice());
         log.info("Stock: {}", request.getStockQuantity());
+        log.info("Image URLs count: {}", request.getImageUrls() != null ? request.getImageUrls().size() : 0);
         
         try {
             Product product = productService.createProduct(
                 request.getName(),
                 request.getDescription(),
                 request.getPrice(),
-                request.getImageUrl(),
+                request.getImageUrls(),
                 request.getStockQuantity()
             );
             
@@ -362,7 +363,7 @@ public class AdminController {
             product.getName(),
             product.getDescription(),
             product.getPrice(),
-            product.getImageUrl(),
+            product.getImageUrlsList(), // Ko'p rasmlar
             product.getStockQuantity(),
             product.getStatus().toString(),
             product.getCreatedAt()
@@ -391,7 +392,7 @@ public class AdminController {
         private String name;
         private String description;
         private String price;
-        private String imageUrl;
+        private List<String> imageUrls; // Ko'p rasmlar
         private Integer stockQuantity;
     }
     

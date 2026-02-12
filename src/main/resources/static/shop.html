@@ -59,10 +59,89 @@
         .product-image {
             width: 100%;
             height: 200px;
-            object-fit: cover;
+            position: relative;
+            overflow: hidden;
             border-radius: 8px;
             margin-bottom: 10px;
             background: #f0f0f0;
+        }
+        
+        .image-slider {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .slider-track {
+            display: flex;
+            transition: transform 0.3s ease;
+            height: 100%;
+        }
+        
+        .slider-image {
+            min-width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .slider-dots {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            z-index: 10;
+        }
+        
+        .slider-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .slider-dot.active {
+            background: white;
+        }
+        
+        .slider-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: background 0.3s;
+        }
+        
+        .slider-arrow:hover {
+            background: rgba(0, 0, 0, 0.7);
+        }
+        
+        .slider-arrow.left {
+            left: 10px;
+        }
+        
+        .slider-arrow.right {
+            right: 10px;
+        }
+        
+        .no-image {
+            width: 100%;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -267,13 +346,38 @@
             card.className = 'product-card';
             
             const isOutOfStock = product.stockQuantity <= 0;
+            const imageUrls = product.imageUrls || [];
+            const hasImages = imageUrls.length > 0;
+            
+            // Image slider HTML
+            let imageHTML = '';
+            if (hasImages) {
+                const sliderId = `slider-${product.id}`;
+                imageHTML = `
+                    <div class="image-slider" id="${sliderId}">
+                        <div class="slider-track">
+                            ${imageUrls.map(url => `
+                                <img src="${url}" alt="${product.name}" class="slider-image">
+                            `).join('')}
+                        </div>
+                        ${imageUrls.length > 1 ? `
+                            <button class="slider-arrow left" onclick="slideImage('${sliderId}', -1)">‹</button>
+                            <button class="slider-arrow right" onclick="slideImage('${sliderId}', 1)">›</button>
+                            <div class="slider-dots">
+                                ${imageUrls.map((_, index) => `
+                                    <div class="slider-dot ${index === 0 ? 'active' : ''}" onclick="goToSlide('${sliderId}', ${index})"></div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                imageHTML = '<div class="no-image">👓</div>';
+            }
             
             card.innerHTML = `
                 <div class="product-image">
-                    ${product.imageUrl ? 
-                        `<img src="${product.imageUrl}" alt="${product.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">` : 
-                        '👓'
-                    }
+                    ${imageHTML}
                 </div>
                 <div class="product-name">${product.name}</div>
                 <div class="product-description">${product.description || ''}</div>
@@ -283,7 +387,57 @@
                 </div>
             `;
             
+            // Initialize slider state
+            if (hasImages && imageUrls.length > 1) {
+                setTimeout(() => {
+                    initSlider(sliderId, imageUrls.length);
+                }, 0);
+            }
+            
             return card;
+        }
+        
+        // Slider state management
+        const sliderStates = {};
+        
+        function initSlider(sliderId, imageCount) {
+            sliderStates[sliderId] = {
+                currentIndex: 0,
+                imageCount: imageCount
+            };
+        }
+        
+        function slideImage(sliderId, direction) {
+            const state = sliderStates[sliderId];
+            if (!state) return;
+            
+            state.currentIndex = (state.currentIndex + direction + state.imageCount) % state.imageCount;
+            updateSlider(sliderId);
+        }
+        
+        function goToSlide(sliderId, index) {
+            const state = sliderStates[sliderId];
+            if (!state) return;
+            
+            state.currentIndex = index;
+            updateSlider(sliderId);
+        }
+        
+        function updateSlider(sliderId) {
+            const state = sliderStates[sliderId];
+            if (!state) return;
+            
+            const slider = document.getElementById(sliderId);
+            if (!slider) return;
+            
+            const track = slider.querySelector('.slider-track');
+            const dots = slider.querySelectorAll('.slider-dot');
+            
+            track.style.transform = `translateX(-${state.currentIndex * 100}%)`;
+            
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === state.currentIndex);
+            });
         }
         
         // Format price

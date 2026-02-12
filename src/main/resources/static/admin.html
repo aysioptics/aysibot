@@ -267,20 +267,10 @@
                     <textarea id="productDescription" placeholder="Tavsif"></textarea>
                     <input type="number" id="productPrice" placeholder="Narxi (so'm) *" required>
                     <div style="grid-column: 1 / -1;">
-                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">Rasm tanlash:</label>
-                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                            <label style="flex: 1;">
-                                <input type="radio" name="imageType" value="url" checked onchange="toggleImageInput()"> URL orqali
-                            </label>
-                            <label style="flex: 1;">
-                                <input type="radio" name="imageType" value="file" onchange="toggleImageInput()"> Fayl yuklash
-                            </label>
-                        </div>
-                        <input type="url" id="productImageUrl" placeholder="Rasm URL (ixtiyoriy)" style="width: 100%; display: block;">
-                        <input type="file" id="productImageFile" accept="image/*" style="width: 100%; display: none;">
-                        <div id="imagePreview" style="margin-top: 10px; display: none;">
-                            <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 5px;">
-                        </div>
+                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">Rasm URL'lari (har bir qatorda bitta URL):</label>
+                        <textarea id="productImageUrls" placeholder="Rasm URL'larini kiriting (har bir qatorda bitta)&#10;Misol:&#10;https://example.com/image1.jpg&#10;https://example.com/image2.jpg&#10;https://example.com/image3.jpg" 
+                            style="width: 100%; min-height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: monospace;"></textarea>
+                        <small style="color: #666; display: block; margin-top: 5px;">💡 Maksimal 5 ta rasm qo'shishingiz mumkin</small>
                     </div>
                     <input type="number" id="productStock" placeholder="Stok miqdori *" required>
                 </div>
@@ -708,12 +698,8 @@
             document.getElementById('productName').value = '';
             document.getElementById('productDescription').value = '';
             document.getElementById('productPrice').value = '';
-            document.getElementById('productImageUrl').value = '';
-            document.getElementById('productImageFile').value = '';
+            document.getElementById('productImageUrls').value = ''; // Ko'p URL'lar
             document.getElementById('productStock').value = '';
-            document.getElementById('imagePreview').style.display = 'none';
-            document.querySelector('input[name="imageType"][value="url"]').checked = true;
-            toggleImageInput();
         }
         
         // Toggle between URL and file input
@@ -758,33 +744,23 @@
             const description = document.getElementById('productDescription').value;
             const price = document.getElementById('productPrice').value;
             const stockQuantity = document.getElementById('productStock').value;
-            const imageType = document.querySelector('input[name="imageType"]:checked').value;
             
             if (!name || !price || !stockQuantity) {
                 alert('Iltimos, majburiy maydonlarni to\'ldiring (*, narx, stok)');
                 return;
             }
             
-            let imageUrl = '';
+            // Ko'p URL'larni olish va tozalash
+            const imageUrlsText = document.getElementById('productImageUrls').value;
+            const imageUrls = imageUrlsText
+                .split('\n')
+                .map(url => url.trim())
+                .filter(url => url.length > 0)
+                .slice(0, 5); // Maksimal 5 ta rasm
             
-            // Handle image based on type
-            if (imageType === 'url') {
-                imageUrl = document.getElementById('productImageUrl').value;
-            } else {
-                // Handle file upload
-                const fileInput = document.getElementById('productImageFile');
-                const file = fileInput.files[0];
-                
-                if (file) {
-                    // Convert image to base64
-                    const reader = new FileReader();
-                    imageUrl = await new Promise((resolve) => {
-                        reader.onload = function(e) {
-                            resolve(e.target.result);
-                        };
-                        reader.readAsDataURL(file);
-                    });
-                }
+            if (imageUrls.length === 0) {
+                alert('Iltimos, kamida bitta rasm URL kiriting!');
+                return;
             }
             
             try {
@@ -794,7 +770,7 @@
                         name: name,
                         description: description,
                         price: price,
-                        imageUrl: imageUrl,
+                        imageUrls: imageUrls, // Ko'p rasmlar
                         stockQuantity: parseInt(stockQuantity)
                     })
                 });
@@ -824,10 +800,16 @@
                 
                 products.forEach(product => {
                     const row = document.createElement('tr');
+                    const firstImage = product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : null;
+                    const imageCount = product.imageUrls ? product.imageUrls.length : 0;
+                    
                     row.innerHTML = `
                         <td>
-                            ${product.imageUrl ? 
-                                `<img src="${product.imageUrl}" alt="${product.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">` : 
+                            ${firstImage ? 
+                                `<div style="position: relative;">
+                                    <img src="${firstImage}" alt="${product.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                    ${imageCount > 1 ? `<span style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 3px; font-size: 10px;">+${imageCount-1}</span>` : ''}
+                                </div>` : 
                                 '👓'
                             }
                         </td>

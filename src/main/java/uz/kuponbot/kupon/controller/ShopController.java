@@ -48,7 +48,7 @@ public class ShopController {
             product.getName(),
             product.getDescription(),
             product.getPrice(),
-            product.getImageUrl(),
+            product.getImageUrlsList(), // Ko'p rasmlar
             product.getStockQuantity(),
             product.getStatus().toString(),
             product.getCreatedAt()
