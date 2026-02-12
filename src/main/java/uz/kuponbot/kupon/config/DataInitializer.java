@@ -24,8 +24,7 @@ public class DataInitializer implements CommandLineRunner {
         if (userService.findByTelegramId(1807166165L).isEmpty()) {
             User admin1 = new User();
             admin1.setTelegramId(1807166165L);
-            admin1.setFirstName("Ibodulla");
-            admin1.setLastName("Raxmonberganov");
+            admin1.setFullName("Ibodulla Raxmonberganov");
             admin1.setTelegramUsername("@IbodullaR");
             admin1.setPhoneNumber("+998904297729");
             admin1.setBirthDate("19.03.2005");
@@ -33,14 +32,15 @@ public class DataInitializer implements CommandLineRunner {
             
             userService.save(admin1);
             System.out.println("✅ Admin 1 (Ibodulla Raxmonberganov) created successfully!");
+        } else {
+            System.out.println("ℹ️ Admin 1 (Ibodulla Raxmonberganov) already exists.");
         }
         
         // Admin 2: Aysi Manager
         if (userService.findByTelegramId(6051364132L).isEmpty()) {
             User admin2 = new User();
             admin2.setTelegramId(6051364132L);
-            admin2.setFirstName("Aysi");
-            admin2.setLastName("Manager");
+            admin2.setFullName("Aysi Manager");
             admin2.setTelegramUsername("@aysi_menejer");
             admin2.setPhoneNumber("+998938740305");
             admin2.setBirthDate("01.01.2000");
@@ -48,6 +48,8 @@ public class DataInitializer implements CommandLineRunner {
             
             userService.save(admin2);
             System.out.println("✅ Admin 2 (Aysi Manager) created successfully!");
+        } else {
+            System.out.println("ℹ️ Admin 2 (Aysi Manager) already exists.");
         }
     }
 }
