@@ -267,10 +267,25 @@
                     <textarea id="productDescription" placeholder="Tavsif"></textarea>
                     <input type="number" id="productPrice" placeholder="Narxi (so'm) *" required>
                     <div style="grid-column: 1 / -1;">
-                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">Rasm URL'lari (har bir qatorda bitta URL):</label>
-                        <textarea id="productImageUrls" placeholder="Rasm URL'larini kiriting (har bir qatorda bitta)&#10;Misol:&#10;https://example.com/image1.jpg&#10;https://example.com/image2.jpg&#10;https://example.com/image3.jpg" 
-                            style="width: 100%; min-height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: monospace;"></textarea>
-                        <small style="color: #666; display: block; margin-top: 5px;">💡 Maksimal 5 ta rasm qo'shishingiz mumkin</small>
+                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">Rasm qo'shish:</label>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                            <label style="flex: 1;">
+                                <input type="radio" name="imageType" value="url" checked onchange="toggleImageInput()"> URL orqali
+                            </label>
+                            <label style="flex: 1;">
+                                <input type="radio" name="imageType" value="file" onchange="toggleImageInput()"> Fayl yuklash
+                            </label>
+                        </div>
+                        <div id="urlInputSection" style="display: block;">
+                            <textarea id="productImageUrls" placeholder="Rasm URL'larini kiriting (har bir qatorda bitta)&#10;Misol:&#10;https://example.com/image1.jpg&#10;https://example.com/image2.jpg" 
+                                style="width: 100%; min-height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: monospace;"></textarea>
+                            <small style="color: #666; display: block; margin-top: 5px;">💡 Maksimal 5 ta rasm qo'shishingiz mumkin</small>
+                        </div>
+                        <div id="fileInputSection" style="display: none;">
+                            <input type="file" id="productImageFiles" accept="image/*" multiple style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                            <small style="color: #666; display: block; margin-top: 5px;">💡 Maksimal 5 ta rasm tanlang</small>
+                            <div id="imagePreview" style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;"></div>
+                        </div>
                     </div>
                     <input type="number" id="productStock" placeholder="Stok miqdori *" required>
                 </div>
@@ -698,8 +713,48 @@
             document.getElementById('productName').value = '';
             document.getElementById('productDescription').value = '';
             document.getElementById('productPrice').value = '';
-            document.getElementById('productImageUrls').value = ''; // Ko'p URL'lar
+            document.getElementById('productImageUrls').value = '';
+            document.getElementById('productImageFiles').value = '';
+            document.getElementById('imagePreview').innerHTML = '';
             document.getElementById('productStock').value = '';
+        }
+        
+        // Toggle between URL and file input
+        function toggleImageInput() {
+            const imageType = document.querySelector('input[name="imageType"]:checked').value;
+            const urlSection = document.getElementById('urlInputSection');
+            const fileSection = document.getElementById('fileInputSection');
+            
+            if (imageType === 'url') {
+                urlSection.style.display = 'block';
+                fileSection.style.display = 'none';
+            } else {
+                urlSection.style.display = 'none';
+                fileSection.style.display = 'block';
+                
+                // Add file change listener for preview
+                const fileInput = document.getElementById('productImageFiles');
+                fileInput.onchange = function(e) {
+                    const preview = document.getElementById('imagePreview');
+                    preview.innerHTML = '';
+                    
+                    const files = Array.from(e.target.files).slice(0, 5); // Max 5 files
+                    files.forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            const img = document.createElement('img');
+                            img.src = event.target.result;
+                            img.style.width = '100px';
+                            img.style.height = '100px';
+                            img.style.objectFit = 'cover';
+                            img.style.borderRadius = '5px';
+                            img.style.border = '1px solid #ddd';
+                            preview.appendChild(img);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                };
+            }
         }
         
         // Toggle between URL and file input
@@ -744,24 +799,54 @@
             const description = document.getElementById('productDescription').value;
             const price = document.getElementById('productPrice').value;
             const stockQuantity = document.getElementById('productStock').value;
+            const imageType = document.querySelector('input[name="imageType"]:checked').value;
             
             if (!name || !price || !stockQuantity) {
                 alert('Iltimos, majburiy maydonlarni to\'ldiring (*, narx, stok)');
                 return;
             }
             
-            // Ko'p URL'larni olish va tozalash
-            const imageUrlsText = document.getElementById('productImageUrls').value;
-            const imageUrls = imageUrlsText
-                .split('\n')
-                .map(url => url.trim())
-                .filter(url => url.length > 0)
-                .slice(0, 5); // Maksimal 5 ta rasm
+            let imageUrls = [];
+            
+            // Handle image based on type
+            if (imageType === 'url') {
+                // Ko'p URL'larni olish va tozalash
+                const imageUrlsText = document.getElementById('productImageUrls').value;
+                imageUrls = imageUrlsText
+                    .split('\n')
+                    .map(url => url.trim())
+                    .filter(url => url.length > 0 && url.startsWith('http'))
+                    .slice(0, 5); // Maksimal 5 ta rasm
+                
+                console.log('Parsed URLs:', imageUrls); // Debug
+            } else {
+                // Handle file upload
+                const fileInput = document.getElementById('productImageFiles');
+                const files = Array.from(fileInput.files).slice(0, 5);
+                
+                if (files.length > 0) {
+                    // Convert images to base64
+                    const promises = files.map(file => {
+                        return new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                resolve(e.target.result);
+                            };
+                            reader.readAsDataURL(file);
+                        });
+                    });
+                    
+                    imageUrls = await Promise.all(promises);
+                    console.log('Converted files:', imageUrls.length); // Debug
+                }
+            }
             
             if (imageUrls.length === 0) {
-                alert('Iltimos, kamida bitta rasm URL kiriting!');
+                alert('Iltimos, kamida bitta rasm qo\'shing!');
                 return;
             }
+            
+            console.log('Final imageUrls:', imageUrls); // Debug
             
             try {
                 const response = await apiCall(`${API_BASE}/products`, {
@@ -781,7 +866,9 @@
                     loadStats();
                     loadProducts();
                 } else {
-                    alert('Xatolik yuz berdi!');
+                    const error = await response.text();
+                    console.error('Server error:', error);
+                    alert('Xatolik yuz berdi: ' + error);
                 }
             } catch (error) {
                 console.error('Error adding product:', error);

@@ -407,21 +407,22 @@
             };
         }
         
-        function slideImage(sliderId, direction) {
+        // Global functions for onclick handlers
+        window.slideImage = function(sliderId, direction) {
             const state = sliderStates[sliderId];
             if (!state) return;
             
             state.currentIndex = (state.currentIndex + direction + state.imageCount) % state.imageCount;
             updateSlider(sliderId);
-        }
+        };
         
-        function goToSlide(sliderId, index) {
+        window.goToSlide = function(sliderId, index) {
             const state = sliderStates[sliderId];
             if (!state) return;
             
             state.currentIndex = index;
             updateSlider(sliderId);
-        }
+        };
         
         function updateSlider(sliderId) {
             const state = sliderStates[sliderId];
@@ -433,7 +434,9 @@
             const track = slider.querySelector('.slider-track');
             const dots = slider.querySelectorAll('.slider-dot');
             
-            track.style.transform = `translateX(-${state.currentIndex * 100}%)`;
+            if (track) {
+                track.style.transform = `translateX(-${state.currentIndex * 100}%)`;
+            }
             
             dots.forEach((dot, index) => {
                 dot.classList.toggle('active', index === state.currentIndex);
