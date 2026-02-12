@@ -264,7 +264,7 @@
                 document.getElementById('loading').style.display = 'none';
                 
                 if (products.length === 0) {
-                    showTestProducts();
+                    document.getElementById('empty').style.display = 'block';
                 } else {
                     displayProducts(products);
                     document.getElementById('products').style.display = 'grid';
@@ -272,63 +272,8 @@
             } catch (error) {
                 console.error('Error loading products:', error);
                 document.getElementById('loading').style.display = 'none';
-                showTestProducts();
+                document.getElementById('empty').style.display = 'block';
             }
-        }
-        
-        // Show test products when API fails
-        function showTestProducts() {
-            const testProducts = [
-                {
-                    id: 1,
-                    name: "Ray-Ban Aviator Classic",
-                    description: "Klassik aviator uslubidagi ko'zoynak. UV himoyasi bilan.",
-                    price: 450000,
-                    imageUrl: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=300&h=200&fit=crop",
-                    stockQuantity: 15,
-                    status: "ACTIVE"
-                },
-                {
-                    id: 2,
-                    name: "Oakley Holbrook Sport",
-                    description: "Sport uslubidagi ko'zoynak. Faol hayot tarzi uchun ideal.",
-                    price: 380000,
-                    imageUrl: "https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=300&h=200&fit=crop",
-                    stockQuantity: 20,
-                    status: "ACTIVE"
-                },
-                {
-                    id: 3,
-                    name: "Persol Premium",
-                    description: "Italyan dizayni. Premium sifat va uslub.",
-                    price: 650000,
-                    imageUrl: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=300&h=200&fit=crop",
-                    stockQuantity: 8,
-                    status: "ACTIVE"
-                },
-                {
-                    id: 4,
-                    name: "Tom Ford Luxury",
-                    description: "Hashamatli dizayn va yuqori sifat. VIP mijozlar uchun.",
-                    price: 850000,
-                    imageUrl: "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=300&h=200&fit=crop",
-                    stockQuantity: 5,
-                    status: "ACTIVE"
-                },
-                {
-                    id: 5,
-                    name: "Polaroid Classic",
-                    description: "Retro uslub va zamonaviy texnologiya. Polarizatsiya bilan.",
-                    price: 320000,
-                    imageUrl: "https://images.unsplash.com/photo-1577803645773-f96470509666?w=300&h=200&fit=crop",
-                    stockQuantity: 12,
-                    status: "ACTIVE"
-                }
-            ];
-            
-            products = testProducts;
-            displayProducts(products);
-            document.getElementById('products').style.display = 'grid';
         }
         
         // Display products
