@@ -261,11 +261,15 @@
                 
                 products = await response.json();
                 
+                console.log('Products loaded:', products.length); // Debug
+                
                 document.getElementById('loading').style.display = 'none';
                 
                 if (products.length === 0) {
+                    console.log('No products, showing empty state'); // Debug
                     document.getElementById('empty').style.display = 'block';
                 } else {
+                    console.log('Displaying products'); // Debug
                     displayProducts(products);
                     document.getElementById('products').style.display = 'grid';
                 }
@@ -295,11 +299,11 @@
             const isOutOfStock = product.stockQuantity <= 0;
             const imageUrls = product.imageUrls || [];
             const hasImages = imageUrls.length > 0;
+            const galleryId = `gallery-${product.id}`; // Move outside if block
             
             // Image gallery HTML
             let imageHTML = '';
             if (hasImages) {
-                const galleryId = `gallery-${product.id}`;
                 imageHTML = `
                     <div class="product-image" id="${galleryId}">
                         <img class="gallery-image" src="${imageUrls[0]}" alt="${product.name}">
