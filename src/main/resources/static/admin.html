@@ -282,9 +282,14 @@
                             <small style="color: #666; display: block; margin-top: 5px;">💡 Maksimal 5 ta rasm qo'shishingiz mumkin</small>
                         </div>
                         <div id="fileInputSection" style="display: none;">
-                            <input type="file" id="productImageFiles" accept="image/*" multiple style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                            <small style="color: #666; display: block; margin-top: 5px;">💡 Maksimal 5 ta rasm tanlang</small>
-                            <div id="imagePreview" style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;"></div>
+                            <label for="productImageFiles" style="display: block; cursor: pointer; padding: 40px; border: 2px dashed #ddd; border-radius: 5px; text-align: center; background: #f9f9f9; transition: all 0.3s;">
+                                <div style="font-size: 48px; margin-bottom: 10px;">�</div>
+                                <div style="font-size: 16px; color: #666; margin-bottom: 5px;">Rasmlarni tanlash uchun bosing</div>
+                                <div style="font-size: 12px; color: #999;">yoki rasmlarni bu yerga sudrab oling</div>
+                            </label>
+                            <input type="file" id="productImageFiles" accept="image/*" multiple style="display: none;">
+                            <small style="color: #666; display: block; margin-top: 10px;">💡 Maksimal 5 ta rasm tanlang (JPG, PNG, GIF)</small>
+                            <div id="imagePreview" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;"></div>
                         </div>
                     </div>
                     <input type="number" id="productStock" placeholder="Stok miqdori *" required>
@@ -724,6 +729,7 @@
             const imageType = document.querySelector('input[name="imageType"]:checked').value;
             const urlSection = document.getElementById('urlInputSection');
             const fileSection = document.getElementById('fileInputSection');
+            const fileInput = document.getElementById('productImageFiles');
             
             if (imageType === 'url') {
                 urlSection.style.display = 'block';
@@ -732,29 +738,100 @@
                 urlSection.style.display = 'none';
                 fileSection.style.display = 'block';
                 
-                // Add file change listener for preview
-                const fileInput = document.getElementById('productImageFiles');
-                fileInput.onchange = function(e) {
-                    const preview = document.getElementById('imagePreview');
-                    preview.innerHTML = '';
-                    
-                    const files = Array.from(e.target.files).slice(0, 5); // Max 5 files
-                    files.forEach(file => {
-                        const reader = new FileReader();
-                        reader.onload = function(event) {
-                            const img = document.createElement('img');
-                            img.src = event.target.result;
-                            img.style.width = '100px';
-                            img.style.height = '100px';
-                            img.style.objectFit = 'cover';
-                            img.style.borderRadius = '5px';
-                            img.style.border = '1px solid #ddd';
-                            preview.appendChild(img);
-                        };
-                        reader.readAsDataURL(file);
-                    });
-                };
+                // Setup file input handler
+                setupFileInput();
             }
+        }
+        
+        // Setup file input with preview
+        function setupFileInput() {
+            const fileInput = document.getElementById('productImageFiles');
+            const preview = document.getElementById('imagePreview');
+            const label = fileInput.previousElementSibling;
+            
+            // Click on label opens file picker
+            label.onclick = function() {
+                fileInput.click();
+            };
+            
+            // Handle file selection
+            fileInput.onchange = function(e) {
+                preview.innerHTML = '';
+                
+                const files = Array.from(e.target.files).slice(0, 5); // Max 5 files
+                
+                if (files.length === 0) return;
+                
+                files.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const container = document.createElement('div');
+                        container.style.position = 'relative';
+                        container.style.display = 'inline-block';
+                        
+                        const img = document.createElement('img');
+                        img.src = event.target.result;
+                        img.style.width = '100px';
+                        img.style.height = '100px';
+                        img.style.objectFit = 'cover';
+                        img.style.borderRadius = '5px';
+                        img.style.border = '2px solid #28a745';
+                        
+                        const badge = document.createElement('div');
+                        badge.textContent = index + 1;
+                        badge.style.position = 'absolute';
+                        badge.style.top = '5px';
+                        badge.style.right = '5px';
+                        badge.style.background = '#28a745';
+                        badge.style.color = 'white';
+                        badge.style.width = '24px';
+                        badge.style.height = '24px';
+                        badge.style.borderRadius = '50%';
+                        badge.style.display = 'flex';
+                        badge.style.alignItems = 'center';
+                        badge.style.justifyContent = 'center';
+                        badge.style.fontSize = '12px';
+                        badge.style.fontWeight = 'bold';
+                        
+                        container.appendChild(img);
+                        container.appendChild(badge);
+                        preview.appendChild(container);
+                    };
+                    reader.readAsDataURL(file);
+                });
+                
+                // Update label text
+                label.querySelector('div:nth-child(2)').textContent = `${files.length} ta rasm tanlandi`;
+            };
+            
+            // Drag and drop support
+            label.ondragover = function(e) {
+                e.preventDefault();
+                label.style.borderColor = '#28a745';
+                label.style.background = '#f0f8f0';
+            };
+            
+            label.ondragleave = function(e) {
+                e.preventDefault();
+                label.style.borderColor = '#ddd';
+                label.style.background = '#f9f9f9';
+            };
+            
+            label.ondrop = function(e) {
+                e.preventDefault();
+                label.style.borderColor = '#ddd';
+                label.style.background = '#f9f9f9';
+                
+                const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).slice(0, 5);
+                
+                // Create a new FileList-like object
+                const dataTransfer = new DataTransfer();
+                files.forEach(file => dataTransfer.items.add(file));
+                fileInput.files = dataTransfer.files;
+                
+                // Trigger change event
+                fileInput.dispatchEvent(new Event('change'));
+            };
         }
         
         // Toggle between URL and file input
