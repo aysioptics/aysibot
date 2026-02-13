@@ -323,6 +323,36 @@
             </table>
         </div>
         
+        <!-- Orders Section -->
+        <div class="section">
+            <h2 class="section-title">🛒 Buyurtmalar</h2>
+            
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                <button class="btn" onclick="loadOrders('all')">Barcha buyurtmalar</button>
+                <button class="btn" onclick="loadOrders('pending')" style="background: #f59e0b;">Kutilmoqda</button>
+            </div>
+            
+            <div id="ordersLoading" class="loading" style="display: none;">Yuklanmoqda...</div>
+            
+            <table class="table" id="ordersTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Mijoz</th>
+                        <th>Telefon</th>
+                        <th>Mahsulot</th>
+                        <th>Miqdor</th>
+                        <th>Summa</th>
+                        <th>Izoh</th>
+                        <th>Holat</th>
+                        <th>Sana</th>
+                        <th>Amallar</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                </tbody>
+            </table>
+        </div>
 
         
         <div class="section">
@@ -673,6 +703,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadStats();
             loadProducts();
+            loadOrders('all');
             loadUsers();
             loadAllVouchers();
             populateYearFilter(); // Yil filtrini avtomatik to'ldirish
@@ -972,21 +1003,107 @@
             }
             
             try {
-                const response = await apiCall(`${API_BASE}/products/${id}`, {
-                    method: 'DELETE'
-                });
-                
-                if (response.ok) {
-                    alert('Mahsulot o\'chirildi!');
-                    loadStats();
-                    loadProducts();
-                } else {
-                    alert('Xatolik yuz berdi!');
-                }
+                await apiCall(`${API_BASE}/products/${id}`, { method: 'DELETE' });
+                alert('Mahsulot o\'chirildi!');
+                loadProducts();
             } catch (error) {
                 console.error('Error deleting product:', error);
                 alert('Xatolik yuz berdi!');
             }
+        }
+        
+        // ========== ORDER FUNCTIONS ==========
+        
+        // Load orders
+        async function loadOrders(filter = 'all') {
+            document.getElementById('ordersLoading').style.display = 'block';
+            document.getElementById('ordersTable').style.display = 'none';
+            
+            try {
+                const endpoint = filter === 'pending' ? `${API_BASE}/orders/pending` : `${API_BASE}/orders`;
+                const response = await apiCall(endpoint);
+                const orders = await response.json();
+                
+                const tbody = document.getElementById('ordersTableBody');
+                tbody.innerHTML = '';
+                
+                if (orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px;">Buyurtmalar yo\'q</td></tr>';
+                } else {
+                    orders.forEach(order => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>#${order.id}</td>
+                            <td>${order.userFullName}</td>
+                            <td>${order.userPhone || '-'}</td>
+                            <td>${order.productName}</td>
+                            <td>${order.quantity} dona</td>
+                            <td>${formatPrice(order.totalPrice)} so'm</td>
+                            <td>${order.customerNote || '-'}</td>
+                            <td>${getOrderStatusBadge(order.status)}</td>
+                            <td>${formatDate(order.createdAt)}</td>
+                            <td>
+                                <select onchange="updateOrderStatus(${order.id}, this.value)" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+                                    <option value="">Holat o'zgartirish</option>
+                                    <option value="CONFIRMED">Tasdiqlash</option>
+                                    <option value="PROCESSING">Tayyorlanmoqda</option>
+                                    <option value="COMPLETED">Bajarildi</option>
+                                    <option value="CANCELLED">Bekor qilish</option>
+                                </select>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+                
+                document.getElementById('ordersLoading').style.display = 'none';
+                document.getElementById('ordersTable').style.display = 'table';
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                document.getElementById('ordersLoading').textContent = 'Xatolik yuz berdi';
+            }
+        }
+        
+        // Get order status badge
+        function getOrderStatusBadge(status) {
+            const badges = {
+                'PENDING': '<span style="background: #fbbf24; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">⏱ Kutilmoqda</span>',
+                'CONFIRMED': '<span style="background: #3b82f6; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">✅ Tasdiqlangan</span>',
+                'PROCESSING': '<span style="background: #8b5cf6; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">⏳ Tayyorlanmoqda</span>',
+                'COMPLETED': '<span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">✅ Bajarildi</span>',
+                'CANCELLED': '<span style="background: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">❌ Bekor qilindi</span>'
+            };
+            return badges[status] || status;
+        }
+        
+        // Update order status
+        async function updateOrderStatus(orderId, newStatus) {
+            if (!newStatus) return;
+            
+            try {
+                await apiCall(`${API_BASE}/orders/${orderId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                alert('Buyurtma holati o\'zgartirildi!');
+                loadOrders('all');
+            } catch (error) {
+                console.error('Error updating order status:', error);
+                alert('Xatolik yuz berdi!');
+            }
+        }
+        
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day}.${month}.${year} ${hours}:${minutes}`;
         }
         
 

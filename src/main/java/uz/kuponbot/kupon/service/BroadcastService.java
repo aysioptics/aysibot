@@ -103,6 +103,23 @@ public class BroadcastService {
         }
     }
     
+    public void sendAdminNotification(String message) {
+        log.info("Sending notification to all admins");
+        
+        // Admin IDs from config
+        String adminIdsStr = System.getProperty("admin.telegram.ids", "1807166165,7543576887");
+        String[] adminIds = adminIdsStr.split(",");
+        
+        for (String adminIdStr : adminIds) {
+            try {
+                Long adminId = Long.parseLong(adminIdStr.trim());
+                sendSingleMessage(adminId, message);
+            } catch (NumberFormatException e) {
+                log.error("Invalid admin ID: {}", adminIdStr);
+            }
+        }
+    }
+    
     /**
      * Video/rasm broadcast qilish metodi
      * CopyMessage API dan foydalanadi - bu eng tez va samarali usul

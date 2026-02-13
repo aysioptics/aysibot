@@ -21,10 +21,12 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uz.kuponbot.kupon.dto.AdminStatsDto;
+import uz.kuponbot.kupon.dto.OrderDto;
 import uz.kuponbot.kupon.dto.ProductDto;
 import uz.kuponbot.kupon.dto.UserDto;
 import uz.kuponbot.kupon.dto.VoucherDto;
 import uz.kuponbot.kupon.entity.Coupon;
+import uz.kuponbot.kupon.entity.Order;
 import uz.kuponbot.kupon.entity.Product;
 import uz.kuponbot.kupon.entity.User;
 import uz.kuponbot.kupon.entity.Voucher;
@@ -32,6 +34,7 @@ import uz.kuponbot.kupon.service.BroadcastService;
 import uz.kuponbot.kupon.service.CouponService;
 import uz.kuponbot.kupon.service.ExcelExportService;
 import uz.kuponbot.kupon.service.NotificationService;
+import uz.kuponbot.kupon.service.OrderService;
 import uz.kuponbot.kupon.service.ProductService;
 import uz.kuponbot.kupon.service.UserService;
 import uz.kuponbot.kupon.service.VoucherService;
@@ -50,6 +53,7 @@ public class AdminController {
     private final BroadcastService broadcastService;
     private final VoucherService voucherService;
     private final uz.kuponbot.kupon.service.CashbackService cashbackService;
+    private final OrderService orderService;
     
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsDto> getStats() {
@@ -545,5 +549,55 @@ public class AdminController {
         private Long telegramId;
         private Integer amount;
         private String description;
+    }
+    
+    // ========== ORDER ENDPOINTS ==========
+    
+    @GetMapping("/orders")
+    public ResponseEntity<List<OrderDto>> getAllOrders() {
+        List<Order> orders = orderService.getAllOrders();
+        List<OrderDto> orderDtos = orders.stream()
+            .map(this::convertToOrderDto)
+            .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(orderDtos);
+    }
+    
+    @GetMapping("/orders/pending")
+    public ResponseEntity<List<OrderDto>> getPendingOrders() {
+        List<Order> orders = orderService.getPendingOrders();
+        List<OrderDto> orderDtos = orders.stream()
+            .map(this::convertToOrderDto)
+            .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(orderDtos);
+    }
+    
+    @PostMapping("/orders/{id}/status")
+    public ResponseEntity<?> updateOrderStatus(@PathVariable Long id, @RequestBody UpdateOrderStatusRequest request) {
+        try {
+            Order.OrderStatus newStatus = Order.OrderStatus.valueOf(request.getStatus());
+            Order order = orderService.updateOrderStatus(id, newStatus);
+            return ResponseEntity.ok(convertToOrderDto(order));
+        } catch (Exception e) {
+            log.error("Error updating order status: ", e);
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    
+    private OrderDto convertToOrderDto(Order order) {
+        return new OrderDto(
+            order.getId(),
+            order.getUser().getTelegramId(),
+            order.getUser().getFullName(),
+            order.getUser().getPhoneNumber(),
+            order.getProduct().getId(),
+            order.getProduct().getName(),
+            order.getQuantity(),
+            order.getTotalPrice(),
+            order.getCustomerNote(),
+            order.getStatus().toString(),
+            order.getCreatedAt()
+        );
     }
 }
