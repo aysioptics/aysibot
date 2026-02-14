@@ -602,11 +602,9 @@ public class KuponBot extends TelegramLongPollingBot {
             }
             
             if (checkChannelSubscription(user.getTelegramId())) {
-                // Obuna tasdiqlandi - kupon yaratish
+                // Obuna tasdiqlandi - ro'yxatdan o'tish yakunlandi
                 user.setState(User.UserState.REGISTERED);
                 userService.save(user);
-                
-                Coupon coupon = couponService.createCouponForUser(user);
                 
                 String successMessage = getLocalizedMessage(user.getLanguage(),
                     String.format(
@@ -615,13 +613,11 @@ public class KuponBot extends TelegramLongPollingBot {
                         "👤 Familiya: %s\n" +
                         "📱 Telefon: %s\n" +
                         "🎂 Tug'ilgan sana: %s\n\n" +
-                        "🎫 Sizning kupon kodingiz: *%s*\n\n" +
-                        "Bu kodni saqlang va kerak bo'lganda ishlatishingiz mumkin!",
+                        "Endi siz mahsulotlarimizni ko'rishingiz va buyurtma berishingiz mumkin!",
                         user.getFirstName(), 
                         user.getLastName(), 
                         user.getPhoneNumber(),
-                        user.getBirthDate(),
-                        coupon.getCode()
+                        user.getBirthDate()
                     ),
                     String.format(
                         "🎉 Табриклаймиз! AYSI OPTICS га рўйхатдан ўтиш муваффақиятли якунланди!\n\n" +
@@ -629,13 +625,11 @@ public class KuponBot extends TelegramLongPollingBot {
                         "👤 Фамилия: %s\n" +
                         "📱 Телефон: %s\n" +
                         "🎂 Туғилган сана: %s\n\n" +
-                        "🎫 Сизнинг купон кодингиз: *%s*\n\n" +
-                        "Бу кодни сақланг ва керак бўлганда ишлатишингиз мумкин!",
+                        "Энди сиз маҳсулотларимизни кўришингиз ва буюртма беришингиз мумкин!",
                         user.getFirstName(), 
                         user.getLastName(), 
                         user.getPhoneNumber(),
-                        user.getBirthDate(),
-                        coupon.getCode()
+                        user.getBirthDate()
                     ),
                     String.format(
                         "🎉 Поздравляем! Регистрация в AYSI OPTICS успешно завершена!\n\n" +
@@ -643,13 +637,11 @@ public class KuponBot extends TelegramLongPollingBot {
                         "👤 Фамилия: %s\n" +
                         "📱 Телефон: %s\n" +
                         "🎂 Дата рождения: %s\n\n" +
-                        "🎫 Ваш код купона: *%s*\n\n" +
-                        "Сохраните этот код и используйте его при необходимости!",
+                        "Теперь вы можете просматривать наши товары и делать заказы!",
                         user.getFirstName(), 
                         user.getLastName(), 
                         user.getPhoneNumber(),
-                        user.getBirthDate(),
-                        coupon.getCode()
+                        user.getBirthDate()
                     )
                 );
                 

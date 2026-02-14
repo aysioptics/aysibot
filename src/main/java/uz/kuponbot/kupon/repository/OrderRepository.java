@@ -1,4 +1,4 @@
-package uz.kuponbot.kupon.repository;
+        package uz.kuponbot.kupon.repository;
 
 import java.util.List;
 
