@@ -53,6 +53,22 @@ public class ShopController {
         return ResponseEntity.ok(convertToProductDto(productOpt.get()));
     }
     
+    @GetMapping("/user/{telegramId}")
+    public ResponseEntity<?> getUserInfo(@PathVariable Long telegramId) {
+        Optional<User> userOpt = userService.findByTelegramId(telegramId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        User user = userOpt.get();
+        return ResponseEntity.ok(new UserInfoResponse(
+            user.getFirstName(),
+            user.getLastName(),
+            user.getPhoneNumber(),
+            user.getTelegramUsername()
+        ));
+    }
+    
     private ProductDto convertToProductDto(Product product) {
         return new ProductDto(
             product.getId(),
@@ -115,5 +131,13 @@ public class ShopController {
     public static class CreateOrderResponse {
         private final Long orderId;
         private final String message;
+    }
+    
+    @Data
+    public static class UserInfoResponse {
+        private final String firstName;
+        private final String lastName;
+        private final String phoneNumber;
+        private final String username;
     }
 }

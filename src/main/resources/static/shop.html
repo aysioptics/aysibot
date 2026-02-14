@@ -939,16 +939,54 @@
                 orderMessage += `📝 Izoh: ${note}\n\n`;
             }
             
-            // Telegram username dan ism olish
-            const userName = tg.initDataUnsafe?.user?.first_name || 'Mijoz';
-            const userLastName = tg.initDataUnsafe?.user?.last_name || '';
-            orderMessage += `👤 Mijoz: ${userName} ${userLastName}`.trim();
+            // User ma'lumotlarini olish
+            let userInfo = '';
+            
+            // Telegram WebApp dan ma'lumot olish
+            if (tg.initDataUnsafe?.user) {
+                const user = tg.initDataUnsafe.user;
+                const firstName = user.first_name || '';
+                const lastName = user.last_name || '';
+                const username = user.username ? `@${user.username}` : '';
+                
+                if (firstName || lastName) {
+                    userInfo = `👤 Mijoz: ${firstName} ${lastName}`.trim();
+                    if (username) {
+                        userInfo += `\n👤 Username: ${username}`;
+                    }
+                } else if (username) {
+                    userInfo = `👤 Username: ${username}`;
+                }
+            }
+            
+            // Agar user ma'lumoti bo'lmasa, serverdan olishga harakat qilamiz
+            if (!userInfo) {
+                try {
+                    const response = await fetch(`/api/shop/user/${telegramId}`);
+                    if (response.ok) {
+                        const userData = await response.json();
+                        userInfo = `👤 Mijoz: ${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+                        if (userData.phoneNumber) {
+                            userInfo += `\n📱 Telefon: ${userData.phoneNumber}`;
+                        }
+                    }
+                } catch (error) {
+                    console.log('Could not fetch user data:', error);
+                }
+            }
+            
+            // Agar hali ham ma'lumot bo'lmasa
+            if (!userInfo) {
+                userInfo = `🆔 Telegram ID: ${telegramId}`;
+            }
+            
+            orderMessage += userInfo;
             
             // Xabarni encode qilish
             const encodedMessage = encodeURIComponent(orderMessage);
             
             // Telegram deep link yaratish
-            const telegramLink = `https://t.me/IbodullaR?text=${encodedMessage}`;
+            const telegramLink = `https://t.me/aysi_menejer?text=${encodedMessage}`;
             
             // Telegram ochish
             window.open(telegramLink, '_blank');
