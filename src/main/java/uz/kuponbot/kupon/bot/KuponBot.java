@@ -28,7 +28,6 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import uz.kuponbot.kupon.entity.Coupon;
 import uz.kuponbot.kupon.entity.User;
 import uz.kuponbot.kupon.entity.Voucher;
 import uz.kuponbot.kupon.service.BroadcastService;
@@ -1375,12 +1374,12 @@ public class KuponBot extends TelegramLongPollingBot {
             return;
         }
         
-        // 3 kunlik test notification yuborish
-        notificationService.testThreeDayRegistrations();
+        // 3 kunlik harid test notification yuborish
+        notificationService.testThreeDayPurchases();
         String successMessage = getLocalizedMessage(user.getLanguage(),
-            "✅ 3 kunlik test bajarildi!",
-            "✅ 3 кунлик тест бажарилди!",
-            "✅ 3-дневный тест выполнен!");
+            "✅ 3 kunlik harid testi bajarildi!",
+            "✅ 3 кунлик харид тести бажарилди!",
+            "✅ 3-дневный тест покупок выполнен!");
         sendMessage(chatId, successMessage);
     }
     

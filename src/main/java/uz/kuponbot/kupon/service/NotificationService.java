@@ -15,6 +15,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uz.kuponbot.kupon.entity.Cashback;
 import uz.kuponbot.kupon.entity.User;
 import uz.kuponbot.kupon.entity.Voucher;
 
@@ -25,39 +26,43 @@ public class NotificationService {
     
     private final UserService userService;
     private final ApplicationContext applicationContext;
+    private final uz.kuponbot.kupon.repository.CashbackRepository cashbackRepository;
     private VoucherService voucherService; // Lazy injection to avoid circular dependency
     
     @Value("${admin.telegram.ids}")
     private String adminTelegramIds;
     
-    // 3 kunlik notification yuborilgan foydalanuvchilarni saqlash
-    private final java.util.Set<Long> notifiedUsers = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    // 3 kunlik harid notification yuborilgan haridlarni saqlash
+    private final java.util.Set<String> notifiedPurchases = java.util.concurrent.ConcurrentHashMap.newKeySet();
     
-    // Har kuni soat 12:00 da 3 kunlik registratsiyalarni tekshirish
+    // Har kuni soat 12:00 da 3 kunlik haridlarni tekshirish
     @Scheduled(cron = "0 0 12 * * *") // Har kuni soat 12:00 da
-    public void checkThreeDayRegistrations() {
-        log.info("Checking 3-day registrations...");
+    public void checkThreeDayPurchases() {
+        log.info("Checking 3-day purchases for admin notification...");
         
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime threeDaysAgo = now.minusDays(3);
         LocalDateTime fourDaysAgo = now.minusDays(4);
         
-        List<User> allUsers = userService.getAllUsers();
+        List<Cashback> allCashbacks = cashbackRepository.findAllByOrderByCreatedAtDesc();
         
-        for (User user : allUsers) {
-            if (user.getCreatedAt() != null && user.getState() == User.UserState.REGISTERED) {
-                // Aniq 3 kun oldin ro'yxatdan o'tgan foydalanuvchilarni topish
-                // 3-4 kun oralig'ida ro'yxatdan o'tganlarni tekshirish
-                if (user.getCreatedAt().isAfter(fourDaysAgo) && 
-                    user.getCreatedAt().isBefore(threeDaysAgo)) {
+        for (Cashback cashback : allCashbacks) {
+            // Faqat EARNED (harid) tipidagi cashbacklarni tekshirish
+            if (cashback.getType() == Cashback.CashbackType.EARNED && 
+                cashback.getCreatedAt() != null) {
+                
+                // 3-4 kun oralig'ida harid qilganlarni topish
+                if (cashback.getCreatedAt().isAfter(fourDaysAgo) && 
+                    cashback.getCreatedAt().isBefore(threeDaysAgo)) {
                     
-                    // Agar bu foydalanuvchiga notification yuborilmagan bo'lsa
-                    if (!notifiedUsers.contains(user.getTelegramId())) {
-                        log.info("Found user registered 3 days ago: {} at {}", 
-                            user.getTelegramId(), user.getCreatedAt());
+                    // Agar bu harid uchun notification yuborilmagan bo'lsa
+                    String notificationKey = "purchase_" + cashback.getId();
+                    if (!notifiedPurchases.contains(notificationKey)) {
+                        log.info("Found purchase 3 days ago: Cashback ID {} for user {} at {}", 
+                            cashback.getId(), cashback.getUser().getTelegramId(), cashback.getCreatedAt());
                         
-                        sendThreeDayRegistrationNotification(user);
-                        notifiedUsers.add(user.getTelegramId()); // Yuborilganligini belgilash
+                        sendThreeDayPurchaseNotification(cashback);
+                        notifiedPurchases.add(notificationKey);
                     }
                 }
             }
@@ -471,35 +476,44 @@ public class NotificationService {
         sendNotificationToAdmin(testMessage);
     }
     
-    private void sendThreeDayRegistrationNotification(User user) {
+    private void sendThreeDayPurchaseNotification(Cashback cashback) {
+        User user = cashback.getUser();
         String usernameInfo = user.getTelegramUsername() != null ? 
             user.getTelegramUsername() : "Username yo'q";
             
         String message = String.format(
             """
-            🆕 3 Kunlik Notification!
+            🛍️ 3 Kunlik Harid Notification!
             
-            👤 Yangi foydalanuvchi: %s %s
+            👤 Mijoz: %s %s
             👤 Username: %s
             📱 Telefon: %s
-            🎂 Tug'ilgan sana: %s
-            📅 Ro'yxatdan o'tgan: %s
             🆔 Telegram ID: %d
-            ⏰ 3 kun oldin ro'yxatdan o'tdi!
             
-            Bu foydalanuvchi 3 kun oldin botga ro'yxatdan o'tgan.
+            💰 Harid summasi: %,d so'm
+            💳 Keshbek: %,d so'm (%.1f%%)
+            📅 Harid sanasi: %s
+            ⏰ 3 kun oldin xarid qilgan!
+            
+            📝 Izoh: %s
+            
+            Bu foydalanuvchi 3 kun oldin xarid qilgan.
             """,
             user.getFirstName(),
             user.getLastName(),
             usernameInfo,
             user.getPhoneNumber(),
-            user.getBirthDate() != null ? user.getBirthDate() : "Kiritilmagan",
-            user.getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")),
-            user.getTelegramId()
+            user.getTelegramId(),
+            cashback.getPurchaseAmount(),
+            cashback.getCashbackAmount(),
+            cashback.getCashbackPercentage(),
+            cashback.getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")),
+            cashback.getDescription() != null ? cashback.getDescription() : "Yo'q"
         );
         
         sendNotificationToAdmin(message);
-        log.info("Sent 3-day registration notification for user: {}", user.getTelegramId());
+        log.info("Sent 3-day purchase notification for cashback ID: {}, user: {}", 
+            cashback.getId(), user.getTelegramId());
     }
     
     private void sendEyewearCareReminder(User user) {
@@ -674,9 +688,9 @@ public class NotificationService {
     }
     
     // Test 3 kunlik registration uchun
-    public void testThreeDayRegistrations() {
-        log.info("Testing 3-day registration notifications...");
-        checkThreeDayRegistrations();
+    public void testThreeDayPurchases() {
+        log.info("Testing 3-day purchase notifications...");
+        checkThreeDayPurchases();
     }
     
     // Test voucher reminders uchun

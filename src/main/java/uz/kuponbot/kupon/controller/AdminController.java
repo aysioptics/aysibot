@@ -156,8 +156,8 @@ public class AdminController {
     
     @PostMapping("/test-3day")
     public ResponseEntity<String> testThreeDay() {
-        notificationService.testThreeDayRegistrations();
-        return ResponseEntity.ok("3-day registration check completed!");
+        notificationService.testThreeDayPurchases();
+        return ResponseEntity.ok("3-day purchase check completed!");
     }
     
     @PostMapping("/test-voucher-reminders")

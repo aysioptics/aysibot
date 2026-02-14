@@ -919,40 +919,46 @@
             const note = document.getElementById('cartNote').value.trim();
             const telegramId = tg.initDataUnsafe?.user?.id || 1807166165;
             
-            try {
-                // Send each cart item as separate order
-                const orderPromises = cart.map(item => 
-                    fetch('/api/shop/orders', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            telegramId: telegramId,
-                            productId: item.productId,
-                            quantity: item.quantity,
-                            customerNote: note || null
-                        })
-                    })
-                );
-                
-                const responses = await Promise.all(orderPromises);
-                
-                // Check if all succeeded
-                const allSuccess = responses.every(r => r.ok);
-                
-                if (allSuccess) {
-                    cart = [];
-                    saveCart();
-                    closeCart();
-                    tg.showAlert('Buyurtma muvaffaqiyatli qabul qilindi! Tez orada admin siz bilan bog\'lanadi.');
-                    await loadProducts(); // Reload to update stock
-                } else {
-                    throw new Error('Ba\'zi buyurtmalar yuborilmadi');
-                }
-                
-            } catch (error) {
-                console.error('Error submitting cart:', error);
-                tg.showAlert('Xatolik: ' + error.message);
+            // Buyurtma xabarini tayyorlash
+            let orderMessage = '🛒 BUYURTMA\n\n';
+            
+            cart.forEach((item, index) => {
+                orderMessage += `${index + 1}. ${item.name}\n`;
+                orderMessage += `   📊 Miqdor: ${item.quantity} dona\n`;
+                orderMessage += `   💰 Narx: ${formatPrice(item.price)} so'm\n`;
+                orderMessage += `   💵 Jami: ${formatPrice(item.price * item.quantity)} so'm\n\n`;
+            });
+            
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            orderMessage += `📦 Jami mahsulotlar: ${totalItems} dona\n`;
+            orderMessage += `💰 Umumiy summa: ${formatPrice(totalPrice)} so'm\n\n`;
+            
+            if (note) {
+                orderMessage += `📝 Izoh: ${note}\n\n`;
             }
+            
+            // Telegram username dan ism olish
+            const userName = tg.initDataUnsafe?.user?.first_name || 'Mijoz';
+            const userLastName = tg.initDataUnsafe?.user?.last_name || '';
+            orderMessage += `👤 Mijoz: ${userName} ${userLastName}`.trim();
+            
+            // Xabarni encode qilish
+            const encodedMessage = encodeURIComponent(orderMessage);
+            
+            // Telegram deep link yaratish
+            const telegramLink = `https://t.me/IbodullaR?text=${encodedMessage}`;
+            
+            // Telegram ochish
+            window.open(telegramLink, '_blank');
+            
+            // Savatni tozalash
+            cart = [];
+            saveCart();
+            closeCart();
+            
+            tg.showAlert('Telegram ochildi. Xabarni yuborish uchun "Yuborish" tugmasini bosing.');
         };
         
         // Order modal functions (keep for backward compatibility)
