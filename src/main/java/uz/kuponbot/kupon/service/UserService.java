@@ -47,7 +47,7 @@ public class UserService {
     
     public List<User> getAllUsers() {
         // Admin ID'larini belgilash
-        List<Long> adminIds = List.of(1807166165L, 6051364132L);
+        List<Long> adminIds = List.of(1807166165L, 7543576887L, 6051364132L, 1892055669L);
         
         // Barcha userlarni olish va adminlarni chiqarib tashlash
         return userRepository.findAll().stream()
@@ -57,7 +57,7 @@ public class UserService {
     
     public long getTotalUsersCount() {
         // Admin ID'larini belgilash
-        List<Long> adminIds = List.of(1807166165L, 6051364132L);
+        List<Long> adminIds = List.of(1807166165L, 7543576887L, 6051364132L, 1892055669L);
         
         // Barcha userlarni sanash va adminlarni chiqarib tashlash
         return userRepository.findAll().stream()
@@ -84,7 +84,7 @@ public class UserService {
         }
         
         // Admin ID'larini belgilash
-        List<Long> adminIds = List.of(1807166165L, 6051364132L);
+        List<Long> adminIds = List.of(1807166165L, 7543576887L, 6051364132L, 1892055669L);
         
         // Filterlangan userlarni olish va adminlarni chiqarib tashlash
         return userRepository.findByCreatedAtBetween(startDate, endDate).stream()
