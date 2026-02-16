@@ -912,46 +912,69 @@
             if (cart.length === 0) return;
             
             // User ma'lumotlarini olish
-            const firstName = tg.initDataUnsafe?.user?.first_name || '';
-            const lastName = tg.initDataUnsafe?.user?.last_name || '';
-            const fullName = `${firstName} ${lastName}`.trim() || 'Mijoz';
+            const user = tg.initDataUnsafe?.user;
+            const telegramId = user?.id;
+            const firstName = user?.first_name || '';
+            const lastName = user?.last_name || '';
+            let fullName = `${firstName} ${lastName}`.trim() || 'Mijoz';
+            let phoneNumber = 'Kiritilmagan';
             
-            // Har bir mahsulot uchun alohida xabar
-            const cartLength = cart.length;
+            // Bazadan telefon raqamini olishga harakat qilish
+            if (telegramId) {
+                try {
+                    const response = await fetch(`/api/shop/user/${telegramId}`);
+                    if (response.ok) {
+                        const userData = await response.json();
+                        if (userData.phoneNumber) {
+                            phoneNumber = userData.phoneNumber;
+                        }
+                        // Bazadan to'liq ismni ham olish
+                        if (userData.firstName || userData.lastName) {
+                            fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || fullName;
+                        }
+                    }
+                } catch (error) {
+                    console.log('Could not fetch user data:', error);
+                }
+            }
+            
+            // Bitta xabarda barcha mahsulotlar
+            let orderMessage = 'Assalomu alaykum!\n\n';
+            orderMessage += 'Men quyidagi mahsulotlar haqida ma\'lumot olmoqchiman:\n\n';
+            
+            // Har bir mahsulotni qo'shish
             cart.forEach((item, index) => {
-                let orderMessage = 'Assalomu alaykum!\n\n';
-                orderMessage += 'Men quyidagi mahsulot haqida ma\'lumot olmoqchiman.\n\n';
-                orderMessage += `🕶 Mahsulot nomi: ${item.name}\n`;
-                orderMessage += `💰 Narxi: ${formatPrice(item.price)} so'm\n`;
-                orderMessage += `📦 Soni: ${item.quantity} dona\n\n`;
-                orderMessage += `👤 Ismim: ${fullName}\n`;
-                orderMessage += `📞 Telefon raqamim: Kiritilmagan\n\n`;
-                orderMessage += 'Iltimos, bu mahsulot haqida ma\'lumot bering. Rahmat.';
-                
-                // Xabarni encode qilish
-                const encodedMessage = encodeURIComponent(orderMessage);
-                
-                // Telegram deep link yaratish
-                const telegramLink = `https://t.me/IbodullaR?text=${encodedMessage}`;
-                
-                // Telegram ochish (har bir mahsulot uchun alohida)
-                setTimeout(() => {
-                    window.open(telegramLink, '_blank');
-                }, index * 500); // Har bir xabar orasida 500ms kutish
+                orderMessage += `${index + 1}. 🕶 ${item.name}\n`;
+                orderMessage += `   💰 Narxi: ${formatPrice(item.price)} so'm\n`;
+                orderMessage += `   📦 Soni: ${item.quantity} dona\n\n`;
             });
+            
+            // Jami summa
+            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            orderMessage += `💵 Jami: ${formatPrice(totalPrice)} so'm\n\n`;
+            
+            // User ma'lumotlari
+            orderMessage += `👤 Ismim: ${fullName}\n`;
+            orderMessage += `📞 Telefon raqamim: ${phoneNumber}\n\n`;
+            orderMessage += 'Iltimos, bu mahsulotlar haqida ma\'lumot bering. Rahmat.';
+            
+            // Xabarni encode qilish
+            const encodedMessage = encodeURIComponent(orderMessage);
+            
+            // Telegram deep link yaratish
+            const telegramLink = `https://t.me/aysi_menejer?text=${encodedMessage}`;
+            
+            // Telegram ochish
+            window.open(telegramLink, '_blank');
             
             // Savatni tozalash
             setTimeout(() => {
                 cart = [];
                 saveCart();
                 closeCart();
-            }, cartLength * 500 + 100);
+            }, 500);
             
-            if (cartLength > 1) {
-                tg.showAlert(`${cartLength} ta Telegram oynasi ochildi. Har birida xabarni yuborish uchun "Yuborish" tugmasini bosing.`);
-            } else {
-                tg.showAlert('Telegram ochildi. Xabarni yuborish uchun "Yuborish" tugmasini bosing.');
-            }
+            tg.showAlert('Telegram ochildi. Xabarni yuborish uchun "Yuborish" tugmasini bosing.');
         };
         
         // Order modal functions (keep for backward compatibility)
