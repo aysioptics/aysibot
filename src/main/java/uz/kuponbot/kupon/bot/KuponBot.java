@@ -1593,7 +1593,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void forwardMessageToAdmin(Message message, User user) {
         // Admin ID'larini olish
-        String[] adminIds = {"1807166165", "6051364132"}; // Admin 1 va Admin 2
+        String[] adminIds = {"1807166165", "7543576887", "6051364132", "1892055669"}; // Barcha adminlar
         
         String userInfo = String.format(
             "📩 Yangi xabar foydalanuvchidan:\n\n" +
@@ -1624,7 +1624,7 @@ public class KuponBot extends TelegramLongPollingBot {
     
     private void notifyAdminAboutHelpRequest(User user) {
         // Admin ID'larini olish
-        String[] adminIds = {"1807166165", "6051364132"}; // Admin 1 va Admin 2
+        String[] adminIds = {"1807166165", "7543576887", "6051364132", "1892055669"}; // Barcha adminlar
         
         String notification = String.format(
             "ℹ️ Yordam so'raldi!\n\n" +
