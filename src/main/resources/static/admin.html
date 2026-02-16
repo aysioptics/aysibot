@@ -672,9 +672,16 @@
         
         // Pagination settings
         const ITEMS_PER_PAGE = 20;
+        const PRODUCTS_PER_PAGE = 10;
+        const ORDERS_PER_PAGE = 10;
+        const VOUCHERS_PER_PAGE = 10;
+        const HISTORY_PER_PAGE = 10;
         let currentUserPage = 1;
         let currentBalancePage = 1;
         let currentHistoryPage = 1;
+        let currentProductPage = 1;
+        let currentOrderPage = 1;
+        let currentVoucherPage = 1;
         
         // Store all users and filtered users
         let allUsers = [];
@@ -959,41 +966,97 @@
                 const response = await apiCall(`${API_BASE}/products`);
                 const products = await response.json();
                 
-                const tbody = document.getElementById('productsTableBody');
-                tbody.innerHTML = '';
-                
-                products.forEach(product => {
-                    const row = document.createElement('tr');
-                    const firstImage = product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : null;
-                    const imageCount = product.imageUrls ? product.imageUrls.length : 0;
-                    
-                    row.innerHTML = `
-                        <td>
-                            ${firstImage ? 
-                                `<div style="position: relative;">
-                                    <img src="${firstImage}" alt="${product.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
-                                    ${imageCount > 1 ? `<span style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 3px; font-size: 10px;">+${imageCount-1}</span>` : ''}
-                                </div>` : 
-                                '👓'
-                            }
-                        </td>
-                        <td>${product.name}</td>
-                        <td>${formatPrice(product.price)} so'm</td>
-                        <td>${product.stockQuantity}</td>
-                        <td>${product.status === 'ACTIVE' ? '✅ Faol' : '❌ Nofaol'}</td>
-                        <td>
-                            <button class="btn" onclick="deleteProduct(${product.id})" style="background: #dc3545; font-size: 12px; padding: 5px 10px;">O'chirish</button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-                
-                document.getElementById('productsLoading').style.display = 'none';
-                document.getElementById('productsTable').style.display = 'table';
+                // Store globally for pagination
+                window.allProducts = products;
+                renderProducts();
             } catch (error) {
                 console.error('Error loading products:', error);
                 document.getElementById('productsLoading').textContent = 'Xatolik yuz berdi';
             }
+        }
+        
+        function renderProducts() {
+            const products = window.allProducts || [];
+            const tbody = document.getElementById('productsTableBody');
+            tbody.innerHTML = '';
+            
+            if (products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">Mahsulotlar yo\'q</td></tr>';
+                document.getElementById('productsLoading').style.display = 'none';
+                document.getElementById('productsTable').style.display = 'table';
+                
+                // Hide pagination
+                let paginationDiv = document.getElementById('productPagination');
+                if (paginationDiv) paginationDiv.style.display = 'none';
+                return;
+            }
+            
+            // Calculate pagination
+            const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
+            const startIndex = (currentProductPage - 1) * PRODUCTS_PER_PAGE;
+            const endIndex = Math.min(startIndex + PRODUCTS_PER_PAGE, products.length);
+            const paginatedProducts = products.slice(startIndex, endIndex);
+            
+            paginatedProducts.forEach(product => {
+                const row = document.createElement('tr');
+                const firstImage = product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : null;
+                const imageCount = product.imageUrls ? product.imageUrls.length : 0;
+                
+                row.innerHTML = `
+                    <td>
+                        ${firstImage ? 
+                            `<div style="position: relative;">
+                                <img src="${firstImage}" alt="${product.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                ${imageCount > 1 ? `<span style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 3px; font-size: 10px;">+${imageCount-1}</span>` : ''}
+                            </div>` : 
+                            '👓'
+                        }
+                    </td>
+                    <td>${product.name}</td>
+                    <td>${formatPrice(product.price)} so'm</td>
+                    <td>${product.stockQuantity}</td>
+                    <td>${product.status === 'ACTIVE' ? '✅ Faol' : '❌ Nofaol'}</td>
+                    <td>
+                        <button class="btn" onclick="deleteProduct(${product.id})" style="background: #dc3545; font-size: 12px; padding: 5px 10px;">O'chirish</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('productsLoading').style.display = 'none';
+            document.getElementById('productsTable').style.display = 'table';
+            
+            // Add pagination controls
+            renderProductPagination(totalPages, products.length, startIndex, endIndex);
+        }
+        
+        function renderProductPagination(totalPages, totalItems, startIndex, endIndex) {
+            let paginationDiv = document.getElementById('productPagination');
+            if (!paginationDiv) {
+                paginationDiv = document.createElement('div');
+                paginationDiv.id = 'productPagination';
+                paginationDiv.className = 'pagination';
+                document.getElementById('productsTable').parentNode.appendChild(paginationDiv);
+            }
+            
+            if (totalPages <= 1) {
+                paginationDiv.style.display = 'none';
+                return;
+            }
+            
+            paginationDiv.style.display = 'flex';
+            paginationDiv.innerHTML = `
+                <button onclick="changeProductPage(1)" ${currentProductPage === 1 ? 'disabled' : ''}>⏮️ Birinchi</button>
+                <button onclick="changeProductPage(${currentProductPage - 1})" ${currentProductPage === 1 ? 'disabled' : ''}>◀️ Oldingi</button>
+                <span class="pagination-info">${startIndex + 1}-${endIndex} / ${totalItems}</span>
+                <button onclick="changeProductPage(${currentProductPage + 1})" ${currentProductPage === totalPages ? 'disabled' : ''}>Keyingi ▶️</button>
+                <button onclick="changeProductPage(${totalPages})" ${currentProductPage === totalPages ? 'disabled' : ''}>Oxirgi ⏭️</button>
+            `;
+        }
+        
+        function changeProductPage(page) {
+            currentProductPage = page;
+            renderProducts();
         }
         
         // Delete product
@@ -1024,44 +1087,97 @@
                 const response = await apiCall(endpoint);
                 const orders = await response.json();
                 
-                const tbody = document.getElementById('ordersTableBody');
-                tbody.innerHTML = '';
-                
-                if (orders.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px;">Buyurtmalar yo\'q</td></tr>';
-                } else {
-                    orders.forEach(order => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>#${order.id}</td>
-                            <td>${order.userFullName}</td>
-                            <td>${order.userPhone || '-'}</td>
-                            <td>${order.productName}</td>
-                            <td>${order.quantity} dona</td>
-                            <td>${formatPrice(order.totalPrice)} so'm</td>
-                            <td>${order.customerNote || '-'}</td>
-                            <td>${getOrderStatusBadge(order.status)}</td>
-                            <td>${formatDate(order.createdAt)}</td>
-                            <td>
-                                <select onchange="updateOrderStatus(${order.id}, this.value)" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
-                                    <option value="">Holat o'zgartirish</option>
-                                    <option value="CONFIRMED">Tasdiqlash</option>
-                                    <option value="PROCESSING">Tayyorlanmoqda</option>
-                                    <option value="COMPLETED">Bajarildi</option>
-                                    <option value="CANCELLED">Bekor qilish</option>
-                                </select>
-                            </td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                }
-                
-                document.getElementById('ordersLoading').style.display = 'none';
-                document.getElementById('ordersTable').style.display = 'table';
+                // Store globally for pagination
+                window.allOrders = orders;
+                currentOrderPage = 1;
+                renderOrders();
             } catch (error) {
                 console.error('Error loading orders:', error);
                 document.getElementById('ordersLoading').textContent = 'Xatolik yuz berdi';
             }
+        }
+        
+        function renderOrders() {
+            const orders = window.allOrders || [];
+            const tbody = document.getElementById('ordersTableBody');
+            tbody.innerHTML = '';
+            
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px;">Buyurtmalar yo\'q</td></tr>';
+                document.getElementById('ordersLoading').style.display = 'none';
+                document.getElementById('ordersTable').style.display = 'table';
+                
+                // Hide pagination
+                let paginationDiv = document.getElementById('orderPagination');
+                if (paginationDiv) paginationDiv.style.display = 'none';
+                return;
+            }
+            
+            // Calculate pagination
+            const totalPages = Math.ceil(orders.length / ORDERS_PER_PAGE);
+            const startIndex = (currentOrderPage - 1) * ORDERS_PER_PAGE;
+            const endIndex = Math.min(startIndex + ORDERS_PER_PAGE, orders.length);
+            const paginatedOrders = orders.slice(startIndex, endIndex);
+            
+            paginatedOrders.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>#${order.id}</td>
+                    <td>${order.userFullName}</td>
+                    <td>${order.userPhone || '-'}</td>
+                    <td>${order.productName}</td>
+                    <td>${order.quantity} dona</td>
+                    <td>${formatPrice(order.totalPrice)} so'm</td>
+                    <td>${order.customerNote || '-'}</td>
+                    <td>${getOrderStatusBadge(order.status)}</td>
+                    <td>${formatDate(order.createdAt)}</td>
+                    <td>
+                        <select onchange="updateOrderStatus(${order.id}, this.value)" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+                            <option value="">Holat o'zgartirish</option>
+                            <option value="CONFIRMED">Tasdiqlash</option>
+                            <option value="PROCESSING">Tayyorlanmoqda</option>
+                            <option value="COMPLETED">Bajarildi</option>
+                            <option value="CANCELLED">Bekor qilish</option>
+                        </select>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('ordersLoading').style.display = 'none';
+            document.getElementById('ordersTable').style.display = 'table';
+            
+            // Add pagination controls
+            renderOrderPagination(totalPages, orders.length, startIndex, endIndex);
+        }
+        
+        function renderOrderPagination(totalPages, totalItems, startIndex, endIndex) {
+            let paginationDiv = document.getElementById('orderPagination');
+            if (!paginationDiv) {
+                paginationDiv = document.createElement('div');
+                paginationDiv.id = 'orderPagination';
+                paginationDiv.className = 'pagination';
+                document.getElementById('ordersTable').parentNode.appendChild(paginationDiv);
+            }
+            
+            if (totalPages <= 1) {
+                paginationDiv.style.display = 'none';
+                return;
+            }
+            
+            paginationDiv.style.display = 'flex';
+            paginationDiv.innerHTML = `
+                <button onclick="changeOrderPage(1)" ${currentOrderPage === 1 ? 'disabled' : ''}>⏮️ Birinchi</button>
+                <button onclick="changeOrderPage(${currentOrderPage - 1})" ${currentOrderPage === 1 ? 'disabled' : ''}>◀️ Oldingi</button>
+                <span class="pagination-info">${startIndex + 1}-${endIndex} / ${totalItems}</span>
+                <button onclick="changeOrderPage(${currentOrderPage + 1})" ${currentOrderPage === totalPages ? 'disabled' : ''}>Keyingi ▶️</button>
+                <button onclick="changeOrderPage(${totalPages})" ${currentOrderPage === totalPages ? 'disabled' : ''}>Oxirgi ⏭️</button>
+            `;
+        }
+        
+        function changeOrderPage(page) {
+            currentOrderPage = page;
+            renderOrders();
         }
         
         // Get order status badge
@@ -1667,6 +1783,14 @@
         }
         
         function displayVouchers(vouchers) {
+            // Store filtered vouchers for pagination
+            window.filteredVouchers = vouchers;
+            currentVoucherPage = 1;
+            renderVouchers();
+        }
+        
+        function renderVouchers() {
+            const vouchers = window.filteredVouchers || [];
             const tbody = document.getElementById('vouchersTableBody');
             tbody.innerHTML = '';
             
@@ -1689,37 +1813,82 @@
                 const row = document.createElement('tr');
                 row.innerHTML = '<td colspan="9" style="text-align: center; padding: 20px; color: #666;">Hech qanday voucher topilmadi</td>';
                 tbody.appendChild(row);
-            } else {
-                vouchers.forEach(voucher => {
-                    const row = document.createElement('tr');
-                    
-                    const statusText = getVoucherStatusText(voucher.status);
-                    const typeText = getVoucherTypeText(voucher.type);
-                    const expiryInfo = voucher.status === 'ACTIVE' ? 
-                        `${voucher.daysUntilExpiry} kun qoldi` : '';
-                    
-                    row.innerHTML = `
-                        <td><strong>${voucher.code.toUpperCase()}</strong></td>
-                        <td>${voucher.userFullName}<br><small>ID: ${voucher.userTelegramId}</small></td>
-                        <td>${formatPrice(voucher.amount)} so'm</td>
-                        <td>${typeText}</td>
-                        <td>${statusText}<br><small>${expiryInfo}</small></td>
-                        <td>${new Date(voucher.createdAt).toLocaleDateString('uz-UZ')}</td>
-                        <td>${new Date(voucher.expiresAt).toLocaleDateString('uz-UZ')}</td>
-                        <td>${voucher.usedAt ? new Date(voucher.usedAt).toLocaleDateString('uz-UZ') : '-'}</td>
-                        <td>
-                            ${voucher.status === 'ACTIVE' ? 
-                                `<button class="btn" onclick="useVoucherFromTable('${voucher.code}')" style="background: #28a745; font-size: 12px; padding: 5px 10px;">Ishlatish</button>` : 
-                                '-'
-                            }
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
+                document.getElementById('vouchersLoading').style.display = 'none';
+                document.getElementById('vouchersTable').style.display = 'table';
+                
+                // Hide pagination
+                let paginationDiv = document.getElementById('voucherPagination');
+                if (paginationDiv) paginationDiv.style.display = 'none';
+                return;
             }
+            
+            // Calculate pagination
+            const totalPages = Math.ceil(vouchers.length / VOUCHERS_PER_PAGE);
+            const startIndex = (currentVoucherPage - 1) * VOUCHERS_PER_PAGE;
+            const endIndex = Math.min(startIndex + VOUCHERS_PER_PAGE, vouchers.length);
+            const paginatedVouchers = vouchers.slice(startIndex, endIndex);
+            
+            paginatedVouchers.forEach(voucher => {
+                const row = document.createElement('tr');
+                
+                const statusText = getVoucherStatusText(voucher.status);
+                const typeText = getVoucherTypeText(voucher.type);
+                const expiryInfo = voucher.status === 'ACTIVE' ? 
+                    `${voucher.daysUntilExpiry} kun qoldi` : '';
+                
+                row.innerHTML = `
+                    <td><strong>${voucher.code.toUpperCase()}</strong></td>
+                    <td>${voucher.userFullName}<br><small>ID: ${voucher.userTelegramId}</small></td>
+                    <td>${formatPrice(voucher.amount)} so'm</td>
+                    <td>${typeText}</td>
+                    <td>${statusText}<br><small>${expiryInfo}</small></td>
+                    <td>${new Date(voucher.createdAt).toLocaleDateString('uz-UZ')}</td>
+                    <td>${new Date(voucher.expiresAt).toLocaleDateString('uz-UZ')}</td>
+                    <td>${voucher.usedAt ? new Date(voucher.usedAt).toLocaleDateString('uz-UZ') : '-'}</td>
+                    <td>
+                        ${voucher.status === 'ACTIVE' ? 
+                            `<button class="btn" onclick="useVoucherFromTable('${voucher.code}')" style="background: #28a745; font-size: 12px; padding: 5px 10px;">Ishlatish</button>` : 
+                            '-'
+                        }
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
             
             document.getElementById('vouchersLoading').style.display = 'none';
             document.getElementById('vouchersTable').style.display = 'table';
+            
+            // Add pagination controls
+            renderVoucherPagination(totalPages, vouchers.length, startIndex, endIndex);
+        }
+        
+        function renderVoucherPagination(totalPages, totalItems, startIndex, endIndex) {
+            let paginationDiv = document.getElementById('voucherPagination');
+            if (!paginationDiv) {
+                paginationDiv = document.createElement('div');
+                paginationDiv.id = 'voucherPagination';
+                paginationDiv.className = 'pagination';
+                document.getElementById('vouchersTable').parentNode.appendChild(paginationDiv);
+            }
+            
+            if (totalPages <= 1) {
+                paginationDiv.style.display = 'none';
+                return;
+            }
+            
+            paginationDiv.style.display = 'flex';
+            paginationDiv.innerHTML = `
+                <button onclick="changeVoucherPage(1)" ${currentVoucherPage === 1 ? 'disabled' : ''}>⏮️ Birinchi</button>
+                <button onclick="changeVoucherPage(${currentVoucherPage - 1})" ${currentVoucherPage === 1 ? 'disabled' : ''}>◀️ Oldingi</button>
+                <span class="pagination-info">${startIndex + 1}-${endIndex} / ${totalItems}</span>
+                <button onclick="changeVoucherPage(${currentVoucherPage + 1})" ${currentVoucherPage === totalPages ? 'disabled' : ''}>Keyingi ▶️</button>
+                <button onclick="changeVoucherPage(${totalPages})" ${currentVoucherPage === totalPages ? 'disabled' : ''}>Oxirgi ⏭️</button>
+            `;
+        }
+        
+        function changeVoucherPage(page) {
+            currentVoucherPage = page;
+            renderVouchers();
         }
         
         async function useVoucherFromTable(code) {
@@ -1986,9 +2155,9 @@
             }
             
             // Calculate pagination
-            const totalPages = Math.ceil(history.length / ITEMS_PER_PAGE);
-            const startIndex = (currentHistoryPage - 1) * ITEMS_PER_PAGE;
-            const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, history.length);
+            const totalPages = Math.ceil(history.length / HISTORY_PER_PAGE);
+            const startIndex = (currentHistoryPage - 1) * HISTORY_PER_PAGE;
+            const endIndex = Math.min(startIndex + HISTORY_PER_PAGE, history.length);
             const paginatedHistory = history.slice(startIndex, endIndex);
             
             paginatedHistory.forEach(item => {

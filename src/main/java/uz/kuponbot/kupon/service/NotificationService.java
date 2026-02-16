@@ -69,27 +69,30 @@ public class NotificationService {
         }
     }
     
-    // Har kuni soat 13:00 da 15 kunlik registratsiyalarni tekshirish (ko'zoynak parvarishi)
+    // Har kuni soat 13:00 da 15 kunlik haridlarni tekshirish (ko'zoynak parvarishi)
     @Scheduled(cron = "0 0 13 * * *") // Har kuni soat 13:00 da
-    public void checkFifteenDayRegistrations() {
-        log.info("Checking 15-day registrations for eyewear care reminder...");
+    public void checkFifteenDayPurchases() {
+        log.info("Checking 15-day purchases for eyewear care reminder...");
         
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime fifteenDaysAgo = now.minusDays(15);
         LocalDateTime sixteenDaysAgo = now.minusDays(16);
         
-        List<User> allUsers = userService.getAllUsers();
+        List<Cashback> allCashbacks = cashbackRepository.findAllByOrderByCreatedAtDesc();
         
-        for (User user : allUsers) {
-            if (user.getCreatedAt() != null && user.getState() == User.UserState.REGISTERED) {
-                // Aniq 15 kun oldin ro'yxatdan o'tgan foydalanuvchilarni topish
-                if (user.getCreatedAt().isAfter(sixteenDaysAgo) && 
-                    user.getCreatedAt().isBefore(fifteenDaysAgo)) {
+        for (Cashback cashback : allCashbacks) {
+            // Faqat EARNED (harid) tipidagi cashbacklarni tekshirish
+            if (cashback.getType() == Cashback.CashbackType.EARNED && 
+                cashback.getCreatedAt() != null) {
+                
+                // 15-16 kun oralig'ida harid qilganlarni topish
+                if (cashback.getCreatedAt().isAfter(sixteenDaysAgo) && 
+                    cashback.getCreatedAt().isBefore(fifteenDaysAgo)) {
                     
-                    log.info("Found user registered 15 days ago: {} at {}", 
-                        user.getTelegramId(), user.getCreatedAt());
+                    log.info("Found purchase 15 days ago: Cashback ID {} for user {} at {}", 
+                        cashback.getId(), cashback.getUser().getTelegramId(), cashback.getCreatedAt());
                     
-                    sendEyewearCareReminder(user);
+                    sendEyewearCareReminder(cashback.getUser());
                 }
             }
         }

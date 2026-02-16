@@ -592,12 +592,7 @@
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">Izoh (ixtiyoriy)</label>
-                    <textarea id="cartNote" class="form-input" rows="3" placeholder="Buyurtma haqida qo'shimcha ma'lumot..."></textarea>
-                </div>
-                
-                <button class="cart-checkout" onclick="checkoutCart()">Buyurtma berish</button>
+                <button class="cart-checkout" onclick="checkoutCart()">Ma'lumot olish</button>
             </div>
         </div>
     </div>
@@ -916,87 +911,47 @@
         window.checkoutCart = async function() {
             if (cart.length === 0) return;
             
-            const note = document.getElementById('cartNote').value.trim();
-            const telegramId = tg.initDataUnsafe?.user?.id || 1807166165;
+            // User ma'lumotlarini olish
+            const firstName = tg.initDataUnsafe?.user?.first_name || '';
+            const lastName = tg.initDataUnsafe?.user?.last_name || '';
+            const fullName = `${firstName} ${lastName}`.trim() || 'Mijoz';
             
-            // Buyurtma xabarini tayyorlash
-            let orderMessage = '🛒 BUYURTMA\n\n';
-            
+            // Har bir mahsulot uchun alohida xabar
+            const cartLength = cart.length;
             cart.forEach((item, index) => {
-                orderMessage += `${index + 1}. ${item.name}\n`;
-                orderMessage += `   📊 Miqdor: ${item.quantity} dona\n`;
-                orderMessage += `   💰 Narx: ${formatPrice(item.price)} so'm\n`;
-                orderMessage += `   💵 Jami: ${formatPrice(item.price * item.quantity)} so'm\n\n`;
+                let orderMessage = 'Assalomu alaykum!\n\n';
+                orderMessage += 'Men quyidagi mahsulot haqida ma\'lumot olmoqchiman.\n\n';
+                orderMessage += `🕶 Mahsulot nomi: ${item.name}\n`;
+                orderMessage += `💰 Narxi: ${formatPrice(item.price)} so'm\n`;
+                orderMessage += `📦 Soni: ${item.quantity} dona\n\n`;
+                orderMessage += `👤 Ismim: ${fullName}\n`;
+                orderMessage += `📞 Telefon raqamim: Kiritilmagan\n\n`;
+                orderMessage += 'Iltimos, bu mahsulot haqida ma\'lumot bering. Rahmat.';
+                
+                // Xabarni encode qilish
+                const encodedMessage = encodeURIComponent(orderMessage);
+                
+                // Telegram deep link yaratish
+                const telegramLink = `https://t.me/IbodullaR?text=${encodedMessage}`;
+                
+                // Telegram ochish (har bir mahsulot uchun alohida)
+                setTimeout(() => {
+                    window.open(telegramLink, '_blank');
+                }, index * 500); // Har bir xabar orasida 500ms kutish
             });
             
-            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            
-            orderMessage += `📦 Jami mahsulotlar: ${totalItems} dona\n`;
-            orderMessage += `💰 Umumiy summa: ${formatPrice(totalPrice)} so'm\n\n`;
-            
-            if (note) {
-                orderMessage += `📝 Izoh: ${note}\n\n`;
-            }
-            
-            // User ma'lumotlarini olish
-            let userInfo = '';
-            
-            // Telegram WebApp dan ma'lumot olish
-            if (tg.initDataUnsafe?.user) {
-                const user = tg.initDataUnsafe.user;
-                const firstName = user.first_name || '';
-                const lastName = user.last_name || '';
-                const username = user.username ? `@${user.username}` : '';
-                
-                if (firstName || lastName) {
-                    userInfo = `👤 Mijoz: ${firstName} ${lastName}`.trim();
-                    if (username) {
-                        userInfo += `\n👤 Username: ${username}`;
-                    }
-                } else if (username) {
-                    userInfo = `👤 Username: ${username}`;
-                }
-            }
-            
-            // Agar user ma'lumoti bo'lmasa, serverdan olishga harakat qilamiz
-            if (!userInfo) {
-                try {
-                    const response = await fetch(`/api/shop/user/${telegramId}`);
-                    if (response.ok) {
-                        const userData = await response.json();
-                        userInfo = `👤 Mijoz: ${userData.firstName || ''} ${userData.lastName || ''}`.trim();
-                        if (userData.phoneNumber) {
-                            userInfo += `\n📱 Telefon: ${userData.phoneNumber}`;
-                        }
-                    }
-                } catch (error) {
-                    console.log('Could not fetch user data:', error);
-                }
-            }
-            
-            // Agar hali ham ma'lumot bo'lmasa
-            if (!userInfo) {
-                userInfo = `🆔 Telegram ID: ${telegramId}`;
-            }
-            
-            orderMessage += userInfo;
-            
-            // Xabarni encode qilish
-            const encodedMessage = encodeURIComponent(orderMessage);
-            
-            // Telegram deep link yaratish
-            const telegramLink = `https://t.me/aysi_menejer?text=${encodedMessage}`;
-            
-            // Telegram ochish
-            window.open(telegramLink, '_blank');
-            
             // Savatni tozalash
-            cart = [];
-            saveCart();
-            closeCart();
+            setTimeout(() => {
+                cart = [];
+                saveCart();
+                closeCart();
+            }, cartLength * 500 + 100);
             
-            tg.showAlert('Telegram ochildi. Xabarni yuborish uchun "Yuborish" tugmasini bosing.');
+            if (cartLength > 1) {
+                tg.showAlert(`${cartLength} ta Telegram oynasi ochildi. Har birida xabarni yuborish uchun "Yuborish" tugmasini bosing.`);
+            } else {
+                tg.showAlert('Telegram ochildi. Xabarni yuborish uchun "Yuborish" tugmasini bosing.');
+            }
         };
         
         // Order modal functions (keep for backward compatibility)

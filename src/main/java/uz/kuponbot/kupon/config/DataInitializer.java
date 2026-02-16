@@ -51,5 +51,21 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             System.out.println("ℹ️ Admin 2 (Aysi Manager) already exists.");
         }
+        
+        // Admin 3: Mirsaid Bahramov
+        if (userService.findByTelegramId(1892055669L).isEmpty()) {
+            User admin3 = new User();
+            admin3.setTelegramId(1892055669L);
+            admin3.setFullName("Mirsaid Bahramov");
+            admin3.setTelegramUsername("@Bakhramov_M");
+            admin3.setPhoneNumber("+998993485570");
+            admin3.setBirthDate("20.10.2005");
+            admin3.setState(User.UserState.REGISTERED);
+            
+            userService.save(admin3);
+            System.out.println("✅ Admin 3 (Mirsaid Bahramov) created successfully!");
+        } else {
+            System.out.println("ℹ️ Admin 3 (Mirsaid Bahramov) already exists.");
+        }
     }
 }
