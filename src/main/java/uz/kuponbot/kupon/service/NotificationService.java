@@ -35,8 +35,8 @@ public class NotificationService {
     // 3 kunlik harid notification yuborilgan haridlarni saqlash
     private final java.util.Set<String> notifiedPurchases = java.util.concurrent.ConcurrentHashMap.newKeySet();
     
-    // Har kuni soat 12:00 da 3 kunlik haridlarni tekshirish
-    @Scheduled(cron = "0 0 12 * * *") // Har kuni soat 12:00 da
+    // Har kuni soat 10:00 Toshkent vaqtida 3 kunlik haridlarni tekshirish
+    @Scheduled(cron = "0 0 5 * * *") // UTC 05:00 = Toshkent 10:00
     public void checkThreeDayPurchases() {
         log.info("Checking 3-day purchases for admin notification...");
         
@@ -69,8 +69,8 @@ public class NotificationService {
         }
     }
     
-    // Har kuni soat 13:00 da 15 kunlik haridlarni tekshirish (ko'zoynak parvarishi)
-    @Scheduled(cron = "0 0 13 * * *") // Har kuni soat 13:00 da
+    // Har kuni soat 10:00 Toshkent vaqtida 15 kunlik haridlarni tekshirish (ko'zoynak parvarishi)
+    @Scheduled(cron = "0 0 5 * * *") // UTC 05:00 = Toshkent 10:00
     public void checkFifteenDayPurchases() {
         log.info("Checking 15-day purchases for eyewear care reminder...");
         
@@ -98,8 +98,8 @@ public class NotificationService {
         }
     }
     
-    // Har kuni soat 14:00 da 3 oylik registratsiyalarni tekshirish (ko'z tekshiruvi eslatmasi)
-    @Scheduled(cron = "0 0 14 * * *") // Har kuni soat 14:00 da
+    // Har kuni soat 10:00 Toshkent vaqtida 3 oylik registratsiyalarni tekshirish (ko'z tekshiruvi eslatmasi)
+    @Scheduled(cron = "0 0 5 * * *") // UTC 05:00 = Toshkent 10:00
     public void checkThreeMonthRegistrations() {
         log.info("Checking 3-month registrations for eye checkup reminder...");
         
@@ -124,8 +124,8 @@ public class NotificationService {
         }
     }
     
-    // Har kuni soat 15:00 da 6 oylik registratsiyalarni tekshirish (bepul konsultatsiya)
-    @Scheduled(cron = "0 0 15 * * *") // Har kuni soat 15:00 da
+    // Har kuni soat 10:00 Toshkent vaqtida 6 oylik registratsiyalarni tekshirish (bepul konsultatsiya)
+    @Scheduled(cron = "0 0 5 * * *") // UTC 05:00 = Toshkent 10:00
     public void checkSixMonthRegistrations() {
         log.info("Checking 6-month registrations for free consultation reminder...");
         
@@ -150,7 +150,8 @@ public class NotificationService {
         }
     }
     
-    @Scheduled(cron = "0 0 9 * * *")
+    // Har kuni soat 10:00 Toshkent vaqtida 6 oylik yubiley
+    @Scheduled(cron = "0 0 5 * * *") // UTC 05:00 = Toshkent 10:00
     public void checkRegistrationAnniversary() {
         log.info("Checking 6-month registration anniversaries...");
         
