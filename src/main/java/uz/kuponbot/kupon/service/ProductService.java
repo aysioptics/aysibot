@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import uz.kuponbot.kupon.entity.Product;
+import uz.kuponbot.kupon.repository.OrderRepository;
 import uz.kuponbot.kupon.repository.ProductRepository;
 
 @Service
@@ -16,6 +17,7 @@ import uz.kuponbot.kupon.repository.ProductRepository;
 public class ProductService {
     
     private final ProductRepository productRepository;
+    private final OrderRepository orderRepository;
     
     public List<Product> getAllActiveProducts() {
         return productRepository.findByStatusOrderByCreatedAtDesc(Product.ProductStatus.ACTIVE);
@@ -69,6 +71,13 @@ public class ProductService {
     }
     
     public void deleteProduct(Long id) {
+        // Avval mahsulotga bog'liq orderlarni o'chirish
+        Optional<Product> productOpt = productRepository.findById(id);
+        if (productOpt.isPresent()) {
+            orderRepository.deleteByProduct(productOpt.get());
+        }
+        
+        // Keyin mahsulotni o'chirish
         productRepository.deleteById(id);
     }
 }

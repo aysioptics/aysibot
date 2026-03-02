@@ -527,10 +527,13 @@
             <div style="margin-bottom: 30px; background: #e8f5e9; padding: 20px; border-radius: 8px;">
                 <h3 style="margin-bottom: 15px;">➕ Yangi Harid Qo'shish</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 2fr auto; gap: 15px; align-items: end;">
-                    <div>
+                    <div style="position: relative;">
                         <label style="display: block; margin-bottom: 5px; font-weight: 600;">Telegram ID</label>
-                        <input type="number" id="purchaseTelegramId" placeholder="123456789" 
+                        <input type="text" id="purchaseTelegramId" placeholder="123456789" 
+                            oninput="searchUserForPurchase(this.value)"
                             style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                        <div id="userSearchResults" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 5px; max-height: 200px; overflow-y: auto; z-index: 1000; margin-top: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+                        <div id="selectedUserInfo" style="margin-top: 5px; font-size: 12px; color: #666;"></div>
                     </div>
                     <div>
                         <label style="display: block; margin-bottom: 5px; font-weight: 600;">Harid miqdori (so'm)</label>
@@ -679,7 +682,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadStats();
             loadProducts();
-            loadOrders('all');
+            // loadOrders('all'); // Orders bo'limi o'chirilgan
             loadUsers();
             loadAllVouchers();
             populateYearFilter(); // Yil filtrini avtomatik to'ldirish
@@ -871,9 +874,9 @@
                     .filter(url => url.length > 0 && url.startsWith('http'))
                     .slice(0, 5); // Maksimal 5 ta rasm
                 
-                console.log('Parsed URLs:', imageUrls); // Debug
+                console.log('Parsed URLs:', imageUrls);
             } else {
-                // Handle file upload
+                // Handle file upload - base64 ga o'girish
                 const fileInput = document.getElementById('productImageFiles');
                 const files = Array.from(fileInput.files).slice(0, 5);
                 
@@ -890,7 +893,7 @@
                     });
                     
                     imageUrls = await Promise.all(promises);
-                    console.log('Converted files:', imageUrls.length); // Debug
+                    console.log('Converted files:', imageUrls.length);
                 }
             }
             
@@ -899,7 +902,7 @@
                 return;
             }
             
-            console.log('Final imageUrls:', imageUrls); // Debug
+            console.log('Final imageUrls:', imageUrls);
             
             try {
                 const response = await apiCall(`${API_BASE}/products`, {
@@ -908,7 +911,7 @@
                         name: name,
                         description: description,
                         price: price,
-                        imageUrls: imageUrls, // Ko'p rasmlar
+                        imageUrls: imageUrls, // URL'lar yoki fayl yo'llari
                         stockQuantity: parseInt(stockQuantity)
                     })
                 });
@@ -974,7 +977,7 @@
                 row.innerHTML = `
                     <td>
                         ${firstImage ? 
-                            `<div style="position: relative;">
+                            `<div style="position: relative; cursor: pointer;" onclick="openImageReorderModal(${product.id})">
                                 <img src="${firstImage}" alt="${product.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
                                 ${imageCount > 1 ? `<span style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 3px; font-size: 10px;">+${imageCount-1}</span>` : ''}
                             </div>` : 
@@ -1887,6 +1890,70 @@
         
         // ========== CASHBACK FUNCTIONS ==========
         
+        // Search user for purchase
+        let userSearchTimeout;
+        async function searchUserForPurchase(query) {
+            clearTimeout(userSearchTimeout);
+            
+            const resultsDiv = document.getElementById('userSearchResults');
+            const infoDiv = document.getElementById('selectedUserInfo');
+            
+            if (!query || query.length < 3) {
+                resultsDiv.style.display = 'none';
+                infoDiv.textContent = '';
+                return;
+            }
+            
+            userSearchTimeout = setTimeout(async () => {
+                try {
+                    // Barcha userlarni olish
+                    const response = await apiCall(`${API_BASE}/users`);
+                    const users = await response.json();
+                    
+                    // Qidiruv
+                    const filtered = users.filter(user => {
+                        const searchStr = `${user.telegramId} ${user.firstName} ${user.lastName} ${user.phoneNumber}`.toLowerCase();
+                        return searchStr.includes(query.toLowerCase());
+                    }).slice(0, 10); // Faqat 10 ta natija
+                    
+                    if (filtered.length === 0) {
+                        resultsDiv.style.display = 'none';
+                        infoDiv.textContent = '';
+                        return;
+                    }
+                    
+                    // Natijalarni ko'rsatish
+                    resultsDiv.innerHTML = filtered.map(user => `
+                        <div onclick="selectUserForPurchase(${user.telegramId}, '${user.firstName || ''} ${user.lastName || ''}', '${user.phoneNumber || ''}')" 
+                            style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; hover:background: #f5f5f5;">
+                            <div style="font-weight: 600;">${user.telegramId}</div>
+                            <div style="font-size: 12px; color: #666;">${user.firstName || ''} ${user.lastName || ''} ${user.phoneNumber ? '• ' + user.phoneNumber : ''}</div>
+                        </div>
+                    `).join('');
+                    resultsDiv.style.display = 'block';
+                    
+                } catch (error) {
+                    console.error('Error searching users:', error);
+                }
+            }, 300);
+        }
+        
+        // Select user for purchase
+        window.selectUserForPurchase = function(telegramId, fullName, phoneNumber) {
+            document.getElementById('purchaseTelegramId').value = telegramId;
+            document.getElementById('userSearchResults').style.display = 'none';
+            document.getElementById('selectedUserInfo').innerHTML = `
+                <strong>${fullName}</strong> ${phoneNumber ? '• ' + phoneNumber : ''}
+            `;
+        };
+        
+        // Close search results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#purchaseTelegramId') && !e.target.closest('#userSearchResults')) {
+                document.getElementById('userSearchResults').style.display = 'none';
+            }
+        });
+        
         // Calculate cashback (5%)
         function calculateCashback() {
             const amount = document.getElementById('purchaseAmount').value;
@@ -2314,11 +2381,141 @@
             return typeMap[type] || type;
         }
         
+        // ========== PRODUCT IMAGE REORDER FUNCTIONS ==========
+        
+        let currentEditingProduct = null;
+        
+        // Open image reorder modal
+        window.openImageReorderModal = async function(productId) {
+            try {
+                // Bitta mahsulotning to'liq ma'lumotini olish
+                const response = await apiCall(`${API_BASE}/products/${productId}`);
+                const product = await response.json();
+                
+                if (!product || !product.imageUrls || product.imageUrls.length === 0) {
+                    alert('Bu mahsulotda rasmlar yo\'q');
+                    return;
+                }
+                
+                currentEditingProduct = product;
+                
+                const modal = document.getElementById('imageReorderModal');
+                const container = document.getElementById('imageReorderContainer');
+                
+                container.innerHTML = product.imageUrls.map((url, index) => `
+                    <div class="image-reorder-item" data-index="${index}">
+                        <img src="${url}" alt="Rasm ${index + 1}">
+                        <div class="image-reorder-info">
+                            <span class="image-number">${index + 1}</span>
+                            ${index === 0 ? '<span class="primary-badge">Birinchi</span>' : ''}
+                        </div>
+                        ${index !== 0 ? `<button class="btn" onclick="makeImagePrimary(${index})" style="background: #28a745; margin-top: 10px;">Birinchi qilish</button>` : ''}
+                    </div>
+                `).join('');
+                
+                modal.style.display = 'flex';
+            } catch (error) {
+                console.error('Error loading product images:', error);
+                alert('Xatolik yuz berdi');
+            }
+        };
+        
+        // Close image reorder modal
+        window.closeImageReorderModal = function() {
+            document.getElementById('imageReorderModal').style.display = 'none';
+            currentEditingProduct = null;
+        };
+        
+        // Make image primary (move to first position)
+        window.makeImagePrimary = async function(index) {
+            if (!currentEditingProduct) return;
+            
+            const newOrder = [...currentEditingProduct.imageUrls];
+            const [selectedImage] = newOrder.splice(index, 1);
+            newOrder.unshift(selectedImage);
+            
+            try {
+                const response = await apiCall(`${API_BASE}/products/${currentEditingProduct.id}/reorder-images`, {
+                    method: 'PUT',
+                    body: JSON.stringify(newOrder)
+                });
+                
+                if (response.ok) {
+                    alert('Rasmlar tartibi o\'zgartirildi!');
+                    closeImageReorderModal();
+                    loadProducts();
+                } else {
+                    alert('Xatolik yuz berdi');
+                }
+            } catch (error) {
+                console.error('Error reordering images:', error);
+                alert('Xatolik yuz berdi');
+            }
+        };
+        
         // Load cashback data on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadCashbackBalances();
             loadCashbackHistory();
         });
     </script>
+    
+    <!-- Image Reorder Modal -->
+    <div id="imageReorderModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; padding: 30px; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">Rasmlar tartibi</h2>
+                <button onclick="closeImageReorderModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+            </div>
+            <p style="color: #666; margin-bottom: 20px;">Birinchi rasmni tanlang. U shop sahifasida birinchi ko'rsatiladi.</p>
+            <div id="imageReorderContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;">
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .image-reorder-item {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .image-reorder-item:hover {
+            border-color: #28a745;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .image-reorder-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .image-reorder-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .image-number {
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .primary-badge {
+            background: #28a745;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
 </body>
 </html>

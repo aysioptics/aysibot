@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import uz.kuponbot.kupon.entity.Order;
+import uz.kuponbot.kupon.entity.Product;
 import uz.kuponbot.kupon.entity.User;
 
 @Repository
@@ -20,4 +21,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     
     @Query("SELECT COUNT(o) FROM Order o WHERE o.status = 'PENDING'")
     long countPendingOrders();
+    
+    // Mahsulotga bog'liq orderlarni o'chirish
+    void deleteByProduct(Product product);
 }

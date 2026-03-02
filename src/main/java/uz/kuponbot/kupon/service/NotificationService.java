@@ -702,4 +702,26 @@ public class NotificationService {
         log.info("Testing voucher reminder notifications...");
         checkVoucherReminders();
     }
+    
+    // Buyurtma notification kanalga yuborish
+    public void sendOrderNotification(String message) {
+        try {
+            TelegramLongPollingBot bot = applicationContext.getBean(TelegramLongPollingBot.class);
+            
+            // KANAL ID ni application.properties dan olish
+            String channelId = applicationContext.getEnvironment().getProperty("order.channel.id", "-1003575695141");
+            
+            SendMessage sendMessage = new SendMessage();
+            sendMessage.setChatId(channelId);
+            sendMessage.setText(message);
+            
+            bot.execute(sendMessage);
+            log.info("Order notification sent to channel: {}", channelId);
+            
+        } catch (TelegramApiException e) {
+            log.error("Failed to send order notification to channel: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("Error sending order notification: {}", e.getMessage());
+        }
+    }
 }

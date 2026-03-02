@@ -17,4 +17,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByTelegramId(Long telegramId);
     
     List<User> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+    
+    // So'nggi ro'yxatdan o'tganlar birinchi
+    List<User> findAllByOrderByCreatedAtDesc();
+    
+    List<User> findByCreatedAtBetweenOrderByCreatedAtDesc(LocalDateTime startDate, LocalDateTime endDate);
 }

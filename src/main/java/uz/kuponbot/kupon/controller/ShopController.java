@@ -19,6 +19,7 @@ import uz.kuponbot.kupon.dto.ProductDto;
 import uz.kuponbot.kupon.entity.Order;
 import uz.kuponbot.kupon.entity.Product;
 import uz.kuponbot.kupon.entity.User;
+import uz.kuponbot.kupon.service.NotificationService;
 import uz.kuponbot.kupon.service.OrderService;
 import uz.kuponbot.kupon.service.ProductService;
 import uz.kuponbot.kupon.service.UserService;
@@ -32,12 +33,13 @@ public class ShopController {
     private final ProductService productService;
     private final UserService userService;
     private final OrderService orderService;
+    private final NotificationService notificationService;
     
     @GetMapping("/products")
     public ResponseEntity<List<ProductDto>> getProducts() {
         List<Product> products = productService.getAvailableProducts();
         List<ProductDto> productDtos = products.stream()
-            .map(this::convertToProductDto)
+            .map(this::convertToProductDtoWithFirstImage)
             .collect(Collectors.toList());
         
         return ResponseEntity.ok(productDtos);
@@ -50,6 +52,7 @@ public class ShopController {
             return ResponseEntity.notFound().build();
         }
         
+        // Bitta mahsulot uchun barcha rasmlarni yuborish
         return ResponseEntity.ok(convertToProductDto(productOpt.get()));
     }
     
@@ -76,6 +79,22 @@ public class ShopController {
             product.getDescription(),
             product.getPrice(),
             product.getImageUrlsList(), // Ko'p rasmlar
+            product.getStockQuantity(),
+            product.getStatus().toString(),
+            product.getCreatedAt()
+        );
+    }
+    
+    private ProductDto convertToProductDtoWithFirstImage(Product product) {
+        List<String> imageUrls = product.getImageUrlsList();
+        List<String> firstImageOnly = imageUrls.isEmpty() ? List.of() : List.of(imageUrls.get(0));
+        
+        return new ProductDto(
+            product.getId(),
+            product.getName(),
+            product.getDescription(),
+            product.getPrice(),
+            firstImageOnly, // Faqat birinchi rasm
             product.getStockQuantity(),
             product.getStatus().toString(),
             product.getCreatedAt()
@@ -119,12 +138,83 @@ public class ShopController {
         }
     }
     
+    @PostMapping("/cart-order")
+    public ResponseEntity<?> createCartOrder(@RequestBody CartOrderRequest request) {
+        log.info("Creating cart order: telegramId={}, items={}", 
+            request.getTelegramId(), request.getItems().size());
+        
+        try {
+            // Find user
+            Optional<User> userOpt = userService.findByTelegramId(request.getTelegramId());
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body("Foydalanuvchi topilmadi");
+            }
+            
+            User user = userOpt.get();
+            
+            // Build order message
+            StringBuilder message = new StringBuilder();
+            message.append("🛒 YANGI BUYURTMA\n\n");
+            message.append("👤 Mijoz: ").append(user.getFirstName()).append(" ").append(user.getLastName()).append("\n");
+            message.append("📞 Telefon: ").append(user.getPhoneNumber() != null ? user.getPhoneNumber() : "Kiritilmagan").append("\n");
+            
+            // Add username if available
+            if (user.getTelegramUsername() != null && !user.getTelegramUsername().isEmpty()) {
+                message.append("👨‍💼 Username: @").append(user.getTelegramUsername()).append("\n");
+            }
+            
+            message.append("🆔 Telegram ID: ").append(user.getTelegramId()).append("\n\n");
+            message.append("📦 Mahsulotlar:\n");
+            
+            double totalPrice = 0;
+            for (CartItem item : request.getItems()) {
+                Optional<Product> productOpt = productService.findById(item.getProductId());
+                if (productOpt.isPresent()) {
+                    Product product = productOpt.get();
+                    double price = product.getPrice().doubleValue();
+                    double itemTotal = price * item.getQuantity();
+                    totalPrice += itemTotal;
+                    
+                    message.append(String.format("• %s\n", product.getName()));
+                    message.append(String.format("  Narxi: %,.0f so'm x %d = %,.0f so'm\n", 
+                        price, item.getQuantity(), itemTotal));
+                }
+            }
+            
+            message.append(String.format("\n💵 Jami: %,.0f so'm", totalPrice));
+            
+            // Send to notification service (will send to channel)
+            notificationService.sendOrderNotification(message.toString());
+            
+            return ResponseEntity.ok(new CreateOrderResponse(
+                null,
+                "Buyurtma qabul qilindi! Tez orada admin siz bilan bog'lanadi."
+            ));
+            
+        } catch (Exception e) {
+            log.error("Error creating cart order: ", e);
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    
     @Data
     public static class CreateOrderRequest {
         private Long telegramId;
         private Long productId;
         private Integer quantity;
         private String customerNote;
+    }
+    
+    @Data
+    public static class CartOrderRequest {
+        private Long telegramId;
+        private List<CartItem> items;
+    }
+    
+    @Data
+    public static class CartItem {
+        private Long productId;
+        private Integer quantity;
     }
     
     @Data

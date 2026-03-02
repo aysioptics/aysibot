@@ -26,7 +26,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uz.kuponbot.kupon.entity.User;
 import uz.kuponbot.kupon.entity.Voucher;
@@ -38,9 +37,11 @@ import uz.kuponbot.kupon.service.UserService;
 import uz.kuponbot.kupon.service.VoucherService;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class KuponBot extends TelegramLongPollingBot {
+    
+    private static volatile boolean instanceCreated = false;
+    private static final Object instanceLock = new Object();
     
     private final UserService userService;
     private final CouponService couponService;
@@ -64,6 +65,30 @@ public class KuponBot extends TelegramLongPollingBot {
     // Pending broadcast message storage
     private Message pendingBroadcastMessage = null;
     private Long pendingBroadcastAdminId = null;
+    
+    // Constructor - singleton pattern
+    public KuponBot(UserService userService, CouponService couponService, 
+                    NotificationService notificationService, BroadcastService broadcastService,
+                    VoucherService voucherService, CashbackService cashbackService) {
+        synchronized (instanceLock) {
+            if (instanceCreated) {
+                log.error("═══════════════════════════════════════════════════════════");
+                log.error("❌ CRITICAL ERROR: Attempting to create multiple KuponBot instances!");
+                log.error("❌ Only ONE bot instance is allowed per Telegram bot token!");
+                log.error("═══════════════════════════════════════════════════════════");
+                throw new IllegalStateException("KuponBot instance already exists! Cannot create multiple instances.");
+            }
+            instanceCreated = true;
+            log.info("✅ KuponBot instance created successfully");
+        }
+        
+        this.userService = userService;
+        this.couponService = couponService;
+        this.notificationService = notificationService;
+        this.broadcastService = broadcastService;
+        this.voucherService = voucherService;
+        this.cashbackService = cashbackService;
+    }
     
     @Override
     public String getBotToken() {
@@ -1214,8 +1239,8 @@ public class KuponBot extends TelegramLongPollingBot {
             new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
         shopButton.setText(buttonText);
         
-        // Production Hetzner HTTPS domain
-        shopButton.setUrl("https://aysioptics.uz/shop.html");
+        // Production Hetzner HTTPS domain (v3 - new backend order system)
+        shopButton.setUrl("https://aysioptics.uz/shop.html?v=4");
         
         row.add(shopButton);
         keyboard.add(row);

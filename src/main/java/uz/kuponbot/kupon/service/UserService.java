@@ -49,8 +49,8 @@ public class UserService {
         // Admin ID'larini belgilash
         List<Long> adminIds = List.of(1807166165L, 7543576887L, 6051364132L, 1892055669L);
         
-        // Barcha userlarni olish va adminlarni chiqarib tashlash
-        return userRepository.findAll().stream()
+        // Barcha userlarni olish (so'nggi ro'yxatdan o'tganlar birinchi) va adminlarni chiqarib tashlash
+        return userRepository.findAllByOrderByCreatedAtDesc().stream()
             .filter(user -> !adminIds.contains(user.getTelegramId()))
             .collect(Collectors.toList());
     }
@@ -80,14 +80,14 @@ public class UserService {
                 startDate = LocalDate.now().withDayOfYear(1).atStartOfDay();
                 break;
             default:
-                return getAllUsers(); // Bu allaqachon adminlarsiz
+                return getAllUsers(); // Bu allaqachon adminlarsiz va sorted
         }
         
         // Admin ID'larini belgilash
         List<Long> adminIds = List.of(1807166165L, 7543576887L, 6051364132L, 1892055669L);
         
-        // Filterlangan userlarni olish va adminlarni chiqarib tashlash
-        return userRepository.findByCreatedAtBetween(startDate, endDate).stream()
+        // Filterlangan userlarni olish (so'nggi ro'yxatdan o'tganlar birinchi) va adminlarni chiqarib tashlash
+        return userRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDate, endDate).stream()
             .filter(user -> !adminIds.contains(user.getTelegramId()))
             .collect(Collectors.toList());
     }

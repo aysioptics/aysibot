@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AYSI OPTICS Katalogi</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>AYSI OPTICS Katalogi v3.1</title>
+    <!-- Version: 2026-03-02-14:15 -->
     <link rel="icon" type="image/png" href="/favicon.png">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -516,12 +520,15 @@
             background: #cccccc;
             cursor: not-allowed;
         }
+
+        /* iOS copy modal - REMOVED (orders now go directly to Telegram channel) */
     </style>
 </head>
 <body>
     <div class="header">
         <h1>👓 AYSI OPTICS Katalogi</h1>
         <p>Eng sifatli ko'zoynaklar bilan tanishing</p>
+        <p style="font-size: 10px; color: #999; margin-top: 5px;">v3.1 - Backend Order System</p>
         <button class="cart-button" onclick="openCart()">
             🛒 Savat <span id="cartCount" class="cart-count">0</span>
         </button>
@@ -597,62 +604,74 @@
         </div>
     </div>
 
+    <!-- iOS Copy Modal - REMOVED (not needed anymore, orders go directly to channel) -->
+
     <script>
-        // Telegram WebApp initialization
+        // Clear any old cached code
+        if (window.oldCheckoutCart) {
+            delete window.oldCheckoutCart;
+        }
+        
         let tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
         
+        // Version check
+        console.log('%c🚀 AYSI OPTICS v3.1 - Backend Order System', 'color: #2481cc; font-size: 16px; font-weight: bold;');
+        console.log('%c✅ Orders now go to Telegram channel via backend', 'color: #00aa00; font-size: 12px;');
+        
+        // Safe alert function with fallback for older Telegram versions
+        function safeAlert(message) {
+            console.log('Alert:', message);
+            try {
+                // Telegram WebApp 6.0 doesn't support showAlert/showPopup
+                // Just use regular alert for compatibility
+                alert(message);
+            } catch (e) {
+                console.error('Alert error:', e);
+            }
+        }
+        
         let products = [];
         let cart = [];
-        
-        // Load cart from localStorage
+        // MANAGER_USERNAME removed - orders now go directly to Telegram channel
+
+        // ========== CART STORAGE ==========
         function loadCart() {
-            const savedCart = localStorage.getItem('aysiCart');
-            if (savedCart) {
-                cart = JSON.parse(savedCart);
-            }
+            try {
+                const savedCart = localStorage.getItem('aysiCart');
+                if (savedCart) cart = JSON.parse(savedCart);
+            } catch(e) {}
             updateCartCount();
         }
         
-        // Save cart to localStorage
         function saveCart() {
-            localStorage.setItem('aysiCart', JSON.stringify(cart));
+            try {
+                localStorage.setItem('aysiCart', JSON.stringify(cart));
+            } catch(e) {}
             updateCartCount();
         }
         
-        // Update cart count badge
         function updateCartCount() {
             const count = cart.reduce((sum, item) => sum + item.quantity, 0);
             document.getElementById('cartCount').textContent = count;
         }
-        
-        // Load products on page load
+
+        // ========== INIT ==========
         document.addEventListener('DOMContentLoaded', function() {
             loadCart();
             loadProducts();
         });
         
-        // Load products from API
         async function loadProducts() {
             try {
                 const response = await fetch('/api/shop/products');
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 products = await response.json();
-                
-                console.log('Products loaded:', products.length); // Debug
-                
                 document.getElementById('loading').style.display = 'none';
-                
                 if (products.length === 0) {
-                    console.log('No products, showing empty state'); // Debug
                     document.getElementById('empty').style.display = 'block';
                 } else {
-                    console.log('Displaying products'); // Debug
                     displayProducts(products);
                     document.getElementById('products').style.display = 'grid';
                 }
@@ -663,45 +682,32 @@
             }
         }
         
-        // Display products
         function displayProducts(products) {
             const container = document.getElementById('products');
             container.innerHTML = '';
-            
             products.forEach(product => {
-                const productCard = createProductCard(product);
-                container.appendChild(productCard);
+                container.appendChild(createProductCard(product));
             });
         }
         
-        // Create product card
         function createProductCard(product) {
             const card = document.createElement('div');
             card.className = 'product-card';
-            
             const isOutOfStock = product.stockQuantity <= 0;
             const imageUrls = product.imageUrls || [];
             const hasImages = imageUrls.length > 0;
-            const galleryId = `gallery-${product.id}`; // Move outside if block
+            const galleryId = `gallery-${product.id}`;
             
-            // Image gallery HTML
             let imageHTML = '';
             if (hasImages) {
                 imageHTML = `
-                    <div class="product-image" id="${galleryId}">
+                    <div class="product-image" id="${galleryId}" data-product-id="${product.id}" data-loaded="false">
                         <img class="gallery-image" src="${imageUrls[0]}" alt="${product.name}">
-                        ${imageUrls.length > 1 ? `
-                            <button class="nav-button prev-button" onclick="previousImage('${galleryId}')">‹</button>
-                            <button class="nav-button next-button" onclick="nextImage('${galleryId}')">›</button>
-                            <div class="image-counter">
-                                <span class="current-index">1</span> / ${imageUrls.length}
-                            </div>
-                            <div class="image-dots">
-                                ${imageUrls.map((_, index) => `
-                                    <div class="image-dot ${index === 0 ? 'active' : ''}" onclick="goToImage('${galleryId}', ${index})"></div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
+                        <button class="nav-button prev-button" onclick="event.stopPropagation(); navigateGallery('${galleryId}', ${product.id}, 'prev')">‹</button>
+                        <button class="nav-button next-button" onclick="event.stopPropagation(); navigateGallery('${galleryId}', ${product.id}, 'next')">›</button>
+                        <div class="image-counter">
+                            <span class="current-index">1</span> / <span class="total-images">...</span>
+                        </div>
                     </div>
                 `;
             } else {
@@ -721,39 +727,66 @@
                 </button>
             `;
             
-            // Initialize gallery
-            if (hasImages && imageUrls.length > 1) {
+            if (hasImages) {
                 window.galleries = window.galleries || {};
                 window.galleries[galleryId] = {
                     images: imageUrls,
-                    currentIndex: 0
+                    currentIndex: 0,
+                    allImagesLoaded: false,
+                    productId: product.id
                 };
             }
-            
             return card;
         }
         
-        // Gallery navigation functions
-        window.nextImage = function(galleryId) {
+        window.navigateGallery = async function(galleryId, productId, direction) {
             const gallery = window.galleries[galleryId];
             if (!gallery) return;
             
-            gallery.currentIndex = (gallery.currentIndex + 1) % gallery.images.length;
+            if (!gallery.allImagesLoaded) {
+                try {
+                    const response = await fetch(`/api/shop/products/${productId}`);
+                    if (!response.ok) throw new Error('Failed to load product details');
+                    const product = await response.json();
+                    const allImages = product.imageUrls || [];
+                    gallery.images = allImages;
+                    gallery.allImagesLoaded = true;
+                    
+                    const container = document.getElementById(galleryId);
+                    if (container) {
+                        container.setAttribute('data-loaded', 'true');
+                        const totalSpan = container.querySelector('.total-images');
+                        if (totalSpan) totalSpan.textContent = allImages.length;
+                        
+                        if (allImages.length > 1) {
+                            const dotsHTML = `
+                                <div class="image-dots">
+                                    ${allImages.map((_, index) => `
+                                        <div class="image-dot ${index === 0 ? 'active' : ''}" onclick="event.stopPropagation(); goToImageDirect('${galleryId}', ${index})"></div>
+                                    `).join('')}
+                                </div>
+                            `;
+                            container.insertAdjacentHTML('beforeend', dotsHTML);
+                        }
+                    }
+                    if (allImages.length <= 1) return;
+                } catch (error) {
+                    console.error('Error loading full gallery:', error);
+                    return;
+                }
+            }
+            
+            if (direction === 'next') {
+                gallery.currentIndex = (gallery.currentIndex + 1) % gallery.images.length;
+            } else {
+                gallery.currentIndex = (gallery.currentIndex - 1 + gallery.images.length) % gallery.images.length;
+            }
             updateGallery(galleryId);
         };
         
-        window.previousImage = function(galleryId) {
+        window.goToImageDirect = function(galleryId, index) {
             const gallery = window.galleries[galleryId];
             if (!gallery) return;
-            
-            gallery.currentIndex = (gallery.currentIndex - 1 + gallery.images.length) % gallery.images.length;
-            updateGallery(galleryId);
-        };
-        
-        window.goToImage = function(galleryId, index) {
-            const gallery = window.galleries[galleryId];
-            if (!gallery) return;
-            
             gallery.currentIndex = index;
             updateGallery(galleryId);
         };
@@ -761,48 +794,32 @@
         function updateGallery(galleryId) {
             const gallery = window.galleries[galleryId];
             if (!gallery) return;
-            
             const container = document.getElementById(galleryId);
             if (!container) return;
-            
             const img = container.querySelector('.gallery-image');
             const counter = container.querySelector('.current-index');
             const dots = container.querySelectorAll('.image-dot');
-            
-            if (img) {
-                img.src = gallery.images[gallery.currentIndex];
-            }
-            
-            if (counter) {
-                counter.textContent = gallery.currentIndex + 1;
-            }
-            
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('active', index === gallery.currentIndex);
-            });
+            if (img) img.src = gallery.images[gallery.currentIndex];
+            if (counter) counter.textContent = gallery.currentIndex + 1;
+            dots.forEach((dot, index) => dot.classList.toggle('active', index === gallery.currentIndex));
         }
         
-        // Format price
         function formatPrice(price) {
             return new Intl.NumberFormat('uz-UZ').format(price);
         }
         
         // ========== CART FUNCTIONS ==========
-        
-        // Add to cart
         window.addToCart = function(productId) {
             const product = products.find(p => p.id === productId);
             if (!product) return;
-            
             const existingItem = cart.find(item => item.productId === productId);
-            
             if (existingItem) {
                 if (existingItem.quantity < product.stockQuantity) {
                     existingItem.quantity++;
                     saveCart();
-                    tg.showAlert('Miqdor oshirildi!');
+                    safeAlert('Miqdor oshirildi!');
                 } else {
-                    tg.showAlert('Omborda yetarli mahsulot yo\'q');
+                    safeAlert('Omborda yetarli mahsulot yo\'q');
                 }
             } else {
                 cart.push({
@@ -814,22 +831,19 @@
                     maxStock: product.stockQuantity
                 });
                 saveCart();
-                tg.showAlert('Savatga qo\'shildi!');
+                safeAlert('Savatga qo\'shildi!');
             }
         };
         
-        // Open cart
         window.openCart = function() {
             renderCart();
             document.getElementById('cartModal').classList.add('active');
         };
         
-        // Close cart
         window.closeCart = function() {
             document.getElementById('cartModal').classList.remove('active');
         };
         
-        // Render cart
         function renderCart() {
             const cartItemsDiv = document.getElementById('cartItems');
             const cartEmpty = document.getElementById('cartEmpty');
@@ -847,9 +861,9 @@
             
             cartItemsDiv.innerHTML = cart.map(item => `
                 <div class="cart-item">
-                    ${item.imageUrl ? 
+                    ${item.imageUrl ?
                         `<img src="${item.imageUrl}" alt="${item.name}" class="cart-item-image">` :
-                        `<div class="cart-item-image" style="display: flex; align-items: center; justify-content: center; font-size: 32px;">👓</div>`
+                        `<div class="cart-item-image" style="display:flex;align-items:center;justify-content:center;font-size:32px;">👓</div>`
                     }
                     <div class="cart-item-details">
                         <div class="cart-item-name">${item.name}</div>
@@ -864,33 +878,27 @@
                 </div>
             `).join('');
             
-            // Update summary
             const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
             const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            
             document.getElementById('cartItemCount').textContent = `${totalItems} dona`;
             document.getElementById('cartTotalPrice').textContent = formatPrice(totalPrice) + ' so\'m';
         }
         
-        // Increase quantity
         window.increaseQuantity = function(productId) {
             const item = cart.find(i => i.productId === productId);
             if (!item) return;
-            
             if (item.quantity < item.maxStock) {
                 item.quantity++;
                 saveCart();
                 renderCart();
             } else {
-                tg.showAlert('Omborda yetarli mahsulot yo\'q');
+                safeAlert('Omborda yetarli mahsulot yo\'q');
             }
         };
         
-        // Decrease quantity
         window.decreaseQuantity = function(productId) {
             const item = cart.find(i => i.productId === productId);
             if (!item) return;
-            
             if (item.quantity > 1) {
                 item.quantity--;
                 saveCart();
@@ -900,104 +908,86 @@
             }
         };
         
-        // Remove from cart
         window.removeFromCart = function(productId) {
             cart = cart.filter(item => item.productId !== productId);
             saveCart();
             renderCart();
         };
-        
-        // Checkout cart
+
+        // ========== PLATFORM DETECTION (not used anymore) ==========
+        function isIOSDevice() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        }
+
+        function getTelegramPlatform() {
+            return tg && tg.platform ? tg.platform : 'unknown';
+        }
+
+        // ========== CHECKOUT ==========
         window.checkoutCart = async function() {
+            console.log('checkoutCart called - NEW VERSION v3.1');
             if (cart.length === 0) return;
             
-            // User ma'lumotlarini olish
             const user = tg.initDataUnsafe?.user;
-            const telegramId = user?.id;
-            const firstName = user?.first_name || '';
-            const lastName = user?.last_name || '';
-            let fullName = `${firstName} ${lastName}`.trim() || 'Mijoz';
-            let phoneNumber = 'Kiritilmagan';
+            const telegramId = user?.id || 0;
             
-            // Bazadan telefon raqamini olishga harakat qilish
-            if (telegramId) {
-                try {
-                    const response = await fetch(`/api/shop/user/${telegramId}`);
-                    if (response.ok) {
-                        const userData = await response.json();
-                        if (userData.phoneNumber) {
-                            phoneNumber = userData.phoneNumber;
-                        }
-                        // Bazadan to'liq ismni ham olish
-                        if (userData.firstName || userData.lastName) {
-                            fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || fullName;
-                        }
-                    }
-                } catch (error) {
-                    console.log('Could not fetch user data:', error);
-                }
+            if (!telegramId) {
+                safeAlert('Telegram ID topilmadi');
+                return;
             }
             
-            // Bitta xabarda barcha mahsulotlar
-            let orderMessage = 'Assalomu alaykum!\n\n';
-            orderMessage += 'Men quyidagi mahsulotlar haqida ma\'lumot olmoqchiman:\n\n';
-            
-            // Har bir mahsulotni qo'shish
-            cart.forEach((item, index) => {
-                orderMessage += `${index + 1}. 🕶 ${item.name}\n`;
-                orderMessage += `   💰 Narxi: ${formatPrice(item.price)} so'm\n`;
-                orderMessage += `   📦 Soni: ${item.quantity} dona\n\n`;
-            });
-            
-            // Jami summa
-            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            orderMessage += `💵 Jami: ${formatPrice(totalPrice)} so'm\n\n`;
-            
-            // User ma'lumotlari
-            orderMessage += `👤 Ismim: ${fullName}\n`;
-            orderMessage += `📞 Telefon raqamim: ${phoneNumber}\n\n`;
-            orderMessage += 'Iltimos, bu mahsulotlar haqida ma\'lumot bering. Rahmat.';
-            
-            // Xabarni encode qilish
-            const encodedMessage = encodeURIComponent(orderMessage);
-            
-            // Telegram deep link yaratish
-            const telegramLink = `https://t.me/aysi_menejer?text=${encodedMessage}`;
-            
-            // Telegram ochish
-            window.open(telegramLink, '_blank');
-            
-            // Savatni tozalash
-            setTimeout(() => {
+            // Backend ga buyurtma yuborish
+            try {
+                const items = cart.map(item => ({
+                    productId: item.productId,
+                    quantity: item.quantity
+                }));
+                
+                const response = await fetch('/api/shop/cart-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegramId: telegramId,
+                        items: items
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Buyurtma yuborishda xatolik');
+                }
+                
+                const result = await response.json();
+                
+                // Savatni tozalash
                 cart = [];
                 saveCart();
                 closeCart();
-            }, 500);
-            
-            tg.showAlert('Telegram ochildi. Xabarni yuborish uchun "Yuborish" tugmasini bosing.');
+                
+                safeAlert(result.message || 'Buyurtma qabul qilindi!');
+                
+            } catch (error) {
+                console.error('Error sending order:', error);
+                safeAlert('Xatolik yuz berdi. Qaytadan urinib ko\'ring.');
+            }
         };
         
-        // Order modal functions (keep for backward compatibility)
+        // ========== ORDER MODAL (backward compat) ==========
         let selectedProduct = null;
         
         window.openOrderModal = function(productId) {
             selectedProduct = products.find(p => p.id === productId);
             if (!selectedProduct) return;
-            
             const modal = document.getElementById('orderModal');
             const productInfo = document.getElementById('orderProductInfo');
-            
             productInfo.innerHTML = `
-                <div style="margin-bottom: 15px; padding: 10px; background: var(--tg-theme-secondary-bg-color, #f8f9fa); border-radius: 8px;">
-                    <div style="font-weight: 600; margin-bottom: 5px;">${selectedProduct.name}</div>
-                    <div style="color: var(--tg-theme-button-color, #2481cc); font-weight: 600;">${formatPrice(selectedProduct.price)} so'm</div>
+                <div style="margin-bottom:15px;padding:10px;background:var(--tg-theme-secondary-bg-color,#f8f9fa);border-radius:8px;">
+                    <div style="font-weight:600;margin-bottom:5px;">${selectedProduct.name}</div>
+                    <div style="color:var(--tg-theme-button-color,#2481cc);font-weight:600;">${formatPrice(selectedProduct.price)} so'm</div>
                 </div>
             `;
-            
             document.getElementById('orderQuantity').value = 1;
             document.getElementById('orderQuantity').max = selectedProduct.stockQuantity;
             document.getElementById('orderNote').value = '';
-            
             modal.classList.add('active');
         };
         
@@ -1008,21 +998,16 @@
         
         window.submitOrder = async function() {
             if (!selectedProduct) return;
-            
             const quantity = parseInt(document.getElementById('orderQuantity').value);
             const note = document.getElementById('orderNote').value.trim();
-            
             if (quantity < 1 || quantity > selectedProduct.stockQuantity) {
-                tg.showAlert(`Miqdor 1 dan ${selectedProduct.stockQuantity} gacha bo'lishi kerak`);
+                safeAlert(`Miqdor 1 dan ${selectedProduct.stockQuantity} gacha bo'lishi kerak`);
                 return;
             }
-            
             try {
                 const response = await fetch('/api/shop/orders', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         telegramId: tg.initDataUnsafe?.user?.id || 1807166165,
                         productId: selectedProduct.id,
@@ -1030,23 +1015,17 @@
                         customerNote: note || null
                     })
                 });
-                
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(errorText || 'Xatolik yuz berdi');
                 }
-                
                 const result = await response.json();
-                
                 closeOrderModal();
-                tg.showAlert(result.message || 'Buyurtma muvaffaqiyatli qabul qilindi!');
-                
-                // Reload products to update stock
+                safeAlert(result.message || 'Buyurtma muvaffaqiyatli qabul qilindi!');
                 await loadProducts();
-                
             } catch (error) {
                 console.error('Error submitting order:', error);
-                tg.showAlert('Xatolik: ' + error.message);
+                safeAlert('Xatolik: ' + error.message);
             }
         };
     </script>

@@ -12,10 +12,12 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ import uz.kuponbot.kupon.entity.Voucher;
 import uz.kuponbot.kupon.service.BroadcastService;
 import uz.kuponbot.kupon.service.CouponService;
 import uz.kuponbot.kupon.service.ExcelExportService;
+import uz.kuponbot.kupon.service.FileUploadService;
 import uz.kuponbot.kupon.service.NotificationService;
 import uz.kuponbot.kupon.service.OrderService;
 import uz.kuponbot.kupon.service.ProductService;
@@ -54,6 +57,7 @@ public class AdminController {
     private final VoucherService voucherService;
     private final uz.kuponbot.kupon.service.CashbackService cashbackService;
     private final OrderService orderService;
+    private final FileUploadService fileUploadService;
     
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsDto> getStats() {
@@ -97,10 +101,37 @@ public class AdminController {
     public ResponseEntity<List<ProductDto>> getAllProducts() {
         List<Product> products = productService.getAllProducts();
         List<ProductDto> productDtos = products.stream()
-            .map(this::convertToProductDto)
+            .map(product -> {
+                // Admin panelda ham faqat birinchi rasmni yuborish (tezlik uchun)
+                List<String> imageUrls = product.getImageUrlsList();
+                List<String> limitedImages = imageUrls.isEmpty() ? 
+                    List.of() : List.of(imageUrls.get(0));
+                
+                return new ProductDto(
+                    product.getId(),
+                    product.getName(),
+                    product.getDescription(),
+                    product.getPrice(),
+                    limitedImages, // Faqat birinchi rasm
+                    product.getStockQuantity(),
+                    product.getStatus().toString(),
+                    product.getCreatedAt()
+                );
+            })
             .collect(Collectors.toList());
         
         return ResponseEntity.ok(productDtos);
+    }
+    
+    @GetMapping("/products/{id}")
+    public ResponseEntity<ProductDto> getProduct(@PathVariable Long id) {
+        Optional<Product> productOpt = productService.findById(id);
+        if (productOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        // Bitta mahsulot uchun barcha rasmlarni yuborish
+        return ResponseEntity.ok(convertToProductDto(productOpt.get()));
     }
     
     @PostMapping("/products")
@@ -133,6 +164,46 @@ public class AdminController {
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.ok().build();
+    }
+    
+    @PutMapping("/products/{id}/reorder-images")
+    public ResponseEntity<ProductDto> reorderProductImages(
+            @PathVariable Long id, 
+            @RequestBody List<String> newImageOrder) {
+        try {
+            Optional<Product> productOpt = productService.findById(id);
+            if (productOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Product product = productOpt.get();
+            product.setImageUrlsList(newImageOrder);
+            Product updated = productService.save(product);
+            
+            return ResponseEntity.ok(convertToProductDto(updated));
+        } catch (Exception e) {
+            log.error("Error reordering product images: ", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    // File upload endpoint
+    @PostMapping(value = "/upload-images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadImages(@RequestParam("files") List<MultipartFile> files) {
+        try {
+            log.info("Uploading {} files", files.size());
+            List<String> fileNames = fileUploadService.uploadImages(files);
+            log.info("Files uploaded successfully: {}", fileNames);
+            return ResponseEntity.ok(new UploadResponse(fileNames));
+        } catch (IOException e) {
+            log.error("Error uploading files", e);
+            return ResponseEntity.badRequest().body("Error uploading files: " + e.getMessage());
+        }
+    }
+    
+    @Data
+    public static class UploadResponse {
+        private final List<String> fileNames;
     }
     
     

@@ -200,14 +200,33 @@ public class CashbackService {
         return userRepository.findAll()
             .stream()
             .filter(user -> user.getState() == User.UserState.REGISTERED)
-            .map(user -> new UserCashbackBalance(
-                user.getTelegramId(),
-                user.getFullName(),
-                user.getPhoneNumber(),
-                user.getCashbackBalance(),
-                getTotalEarned(user),
-                getTotalUsed(user)
-            ))
+            .map(user -> {
+                // So'nggi harid sanasini topish (EARNED type)
+                java.time.LocalDateTime lastPurchase = cashbackRepository
+                    .findByUserOrderByCreatedAtDesc(user)
+                    .stream()
+                    .filter(c -> c.getType() == Cashback.CashbackType.EARNED)
+                    .findFirst()
+                    .map(Cashback::getCreatedAt)
+                    .orElse(null);
+                
+                return new UserCashbackBalance(
+                    user.getTelegramId(),
+                    user.getFullName(),
+                    user.getPhoneNumber(),
+                    user.getCashbackBalance(),
+                    getTotalEarned(user),
+                    getTotalUsed(user),
+                    lastPurchase
+                );
+            })
+            // So'nggi harid qilganlar birinchi (null'lar oxirida)
+            .sorted((a, b) -> {
+                if (a.getLastPurchaseDate() == null && b.getLastPurchaseDate() == null) return 0;
+                if (a.getLastPurchaseDate() == null) return 1;
+                if (b.getLastPurchaseDate() == null) return -1;
+                return b.getLastPurchaseDate().compareTo(a.getLastPurchaseDate());
+            })
             .collect(Collectors.toList());
     }
     
@@ -277,6 +296,7 @@ public class CashbackService {
         private Integer currentBalance;
         private Integer totalEarned;
         private Integer totalUsed;
+        private java.time.LocalDateTime lastPurchaseDate; // So'nggi harid sanasi
     }
     
     @Data
